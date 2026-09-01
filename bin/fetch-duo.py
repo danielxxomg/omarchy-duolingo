@@ -1,14 +1,30 @@
 #!/usr/bin/env python3
-import urllib.request, urllib.error
-import sys, os, json
+import urllib.request, urllib.parse, urllib.error
+import sys, os, json, subprocess
 
 CACHE_DIR = os.path.expanduser("~/.local/state/omarchy")
 CACHE_FILE = os.path.join(CACHE_DIR, "duolingo-cache.json")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def get_username(arg):
+    if arg and arg.strip():
+        return arg.strip()
+    # Try running detect-user.py
+    detect_script = os.path.join(SCRIPT_DIR, "detect-user.py")
+    if os.path.exists(detect_script):
+        try:
+            res = subprocess.run([sys.executable, detect_script], capture_output=True, text=True, timeout=3)
+            if res.returncode == 0 and res.stdout.strip():
+                return res.stdout.strip()
+        except Exception:
+            pass
+    return ""
 
 def main():
-    username = sys.argv[1].strip() if len(sys.argv) > 1 else ""
+    raw_user = sys.argv[1] if len(sys.argv) > 1 else ""
+    username = get_username(raw_user)
+
     if not username:
-        # Fallback to cached data if exists
         if os.path.exists(CACHE_FILE):
             try:
                 with open(CACHE_FILE, "r") as f:
@@ -16,7 +32,7 @@ def main():
                     sys.exit(0)
             except Exception:
                 pass
-        print(json.dumps({"error": "No username provided"}))
+        print(json.dumps({"error": "No username provided or detected"}))
         sys.exit(1)
 
     url = f"https://www.duolingo.com/2017-06-30/users?username={urllib.parse.quote(username)}"
@@ -33,7 +49,6 @@ def main():
             print(content)
             sys.exit(0)
     except Exception as e:
-        # Network failed: read cache if available
         if os.path.exists(CACHE_FILE):
             try:
                 with open(CACHE_FILE, "r") as f:

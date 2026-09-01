@@ -13,14 +13,9 @@ BarWidget {
   readonly property int refreshMinutes: Math.max(5, parseInt(setting("refreshMinutes", 15), 10) || 15)
   readonly property bool showXp: setting("showXp", false) === true
 
-  property string resolvedUsername: ""
   property var userData: null
   property bool fetching: false
   property string lastError: ""
-
-  function effectiveUsername() {
-    return (configuredUsername || resolvedUsername || "").trim()
-  }
 
   function injectPanel() {
     var target = panelLoader.item
@@ -33,14 +28,14 @@ BarWidget {
   }
 
   function refresh() {
-    var user = root.effectiveUsername()
-    if (user === "") {
-      if (!detectProc.running) detectProc.running = true
-      return
-    }
     if (fetchProc.running) return
     root.fetching = true
-    fetchProc.command = ["curl", "-fsS", "--max-time", "6", "https://www.duolingo.com/2017-06-30/users?username=" + encodeURIComponent(user)]
+    var user = (root.configuredUsername || "").trim()
+    if (user !== "") {
+      fetchProc.command = [Quickshell.env("HOME") + "/.config/omarchy/plugins/user.duolingo/bin/fetch-duo.py", user]
+    } else {
+      fetchProc.command = [Quickshell.env("HOME") + "/.config/omarchy/plugins/user.duolingo/bin/fetch-duo.py"]
+    }
     fetchProc.running = true
   }
 
@@ -80,23 +75,6 @@ BarWidget {
     running: true
     repeat: true
     onTriggered: root.refresh()
-  }
-
-  Process {
-    id: detectProc
-    command: [Quickshell.env("HOME") + "/.config/omarchy/plugins/user.duolingo/bin/detect-user.py"]
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: {
-        var detected = String(text || "").trim()
-        if (detected !== "") {
-          root.resolvedUsername = detected
-          root.refresh()
-        } else {
-          root.userData = { valid: false, error: "Set username in panel" }
-        }
-      }
-    }
   }
 
   Process {
