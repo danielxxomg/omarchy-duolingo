@@ -56,7 +56,7 @@ BarWidget {
     if (panelLoader.item && panelLoader.item.close) panelLoader.item.close()
   }
 
-  readonly property real openPanelIndicatorWidth: button.labelWidth
+  readonly property real openPanelIndicatorWidth: barRow.implicitWidth
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -120,7 +120,8 @@ BarWidget {
     text: ""
     labelVisible: false
     hasVisualContent: true
-    fixedWidth: root.vertical ? -1 : Math.round(barContent.implicitWidth + Style.spaceReal(8.5) * 2)
+    fixedWidth: root.vertical ? -1 : Math.round(barRow.implicitWidth + Style.spaceReal(8.5) * 2)
+    fixedHeight: root.vertical ? Style.bar.iconSlot : -1
     tooltipText: Model.tooltipText(root.userData)
 
     onPressed: function(mouseButton) {
@@ -136,31 +137,39 @@ BarWidget {
     }
 
     Row {
-      id: barContent
+      id: barRow
       anchors.centerIn: parent
-      spacing: Style.space(5)
+      spacing: Style.space(6)
 
-      Image {
-        source: Qt.resolvedUrl("assets/duo.png")
+      Item {
         width: Style.space(16)
         height: Style.space(16)
-        fillMode: Image.PreserveAspectFit
+        implicitWidth: Style.space(16)
+        implicitHeight: Style.space(16)
         anchors.verticalCenter: parent.verticalCenter
+
+        Image {
+          source: Qt.resolvedUrl("assets/duo.png")
+          anchors.fill: parent
+          fillMode: Image.PreserveAspectFit
+          smooth: true
+        }
       }
 
       Text {
+        id: streakLabel
         text: {
           if (!root.userData || !root.userData.valid) return "Duo"
           if (root.showXp) return Model.formatNumber(root.userData.totalXp) + " XP"
           return String(root.userData.streak)
         }
         color: {
-          if (!root.userData || !root.userData.valid) return button.foreground
+          if (!root.userData || !root.userData.valid) return root.bar ? root.bar.foreground : Color.foreground
           if (root.userData.streakExtendedToday) return root.accentColor
           return root.urgent
         }
-        font.family: button.fontFamily
-        font.pixelSize: button.fontSize
+        font.family: root.bar ? root.bar.fontFamily : Style.font.family
+        font.pixelSize: Style.font.body
         font.bold: true
         anchors.verticalCenter: parent.verticalCenter
       }
