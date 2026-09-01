@@ -74,8 +74,8 @@ Panel {
     owner: root.barIdentity
     bar: root.bar
     open: root.opened
-    contentWidth: panel.fittedContentWidth(Style.space(340))
-    contentHeight: panel.fittedContentHeight(mainColumn.implicitHeight + Style.space(24), Style.space(560))
+    contentWidth: panel.fittedContentWidth(Style.space(350))
+    contentHeight: panel.fittedContentHeight(mainColumn.implicitHeight)
 
     PanelKeyCatcher {
       id: keyCatcher
@@ -97,84 +97,47 @@ Panel {
 
       Column {
         id: mainColumn
-        width: panel.width - Style.space(24)
-        x: Style.space(12)
-        y: Style.space(12)
-        spacing: Style.space(10)
+        anchors.fill: parent
+        spacing: Style.space(12)
 
-        // 1. Header Row
-        Item {
-          width: parent.width
-          height: Style.space(38)
-
-          Row {
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: Style.space(10)
-
-            Item {
+        // 1. Native Omarchy Hero
+        PanelHero {
+          title: root.userData && root.userData.valid ? root.userData.fullname : "Duolingo Tracker"
+          meta: root.userData && root.userData.valid ? ("@" + root.userData.username) : "Looking for session…"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
+          iconComponent: Component {
+            Image {
+              source: (root.userData && root.userData.avatar) ? root.userData.avatar : Qt.resolvedUrl("assets/duo.png")
               width: Style.space(36)
               height: Style.space(36)
-              anchors.verticalCenter: parent.verticalCenter
-
-              Image {
-                source: (root.userData && root.userData.avatar) ? root.userData.avatar : Qt.resolvedUrl("assets/duo.png")
-                anchors.fill: parent
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-              }
-            }
-
-            Column {
-              width: mainColumn.width - Style.space(130)
-              anchors.verticalCenter: parent.verticalCenter
-              spacing: Style.space(1)
-
-              Text {
-                text: root.userData && root.userData.valid ? root.userData.fullname : "Duolingo Tracker"
-                color: root.foreground
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.title
-                font.bold: true
-                elide: Text.ElideRight
-                width: parent.width
-              }
-
-              Text {
-                text: root.userData && root.userData.valid ? ("@" + root.userData.username) : "Auto-detecting session…"
-                color: root.dim
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
-                elide: Text.ElideRight
-                width: parent.width
-              }
+              fillMode: Image.PreserveAspectFit
+              smooth: true
             }
           }
+          trailingControl: Component {
+            Rectangle {
+              implicitWidth: streakPillRow.implicitWidth + Style.space(12)
+              implicitHeight: Style.space(26)
+              radius: Math.min(Style.cornerRadius, 6)
+              color: root.userData && root.userData.streakExtendedToday ? Qt.rgba(0.34, 0.8, 0.01, 0.18) : Qt.rgba(1.0, 0.4, 0.0, 0.18)
 
-          // Streak Pill
-          Rectangle {
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            width: streakPillRow.implicitWidth + Style.space(12)
-            height: Style.space(26)
-            radius: Math.min(Style.cornerRadius, 6)
-            color: root.userData && root.userData.streakExtendedToday ? Qt.rgba(0.34, 0.8, 0.01, 0.18) : Qt.rgba(1.0, 0.4, 0.0, 0.18)
+              Row {
+                id: streakPillRow
+                anchors.centerIn: parent
+                spacing: Style.space(4)
 
-            Row {
-              id: streakPillRow
-              anchors.centerIn: parent
-              spacing: Style.space(4)
-
-              Text {
-                text: "🔥"
-                font.pixelSize: Style.font.caption
-              }
-              Text {
-                text: root.userData && root.userData.valid ? String(root.userData.streak) : "0"
-                color: root.userData && root.userData.streakExtendedToday ? root.accentColor : root.urgent
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                font.bold: true
+                Text {
+                  text: "🔥"
+                  font.pixelSize: Style.font.caption
+                }
+                Text {
+                  text: root.userData && root.userData.valid ? String(root.userData.streak) : "0"
+                  color: root.userData && root.userData.streakExtendedToday ? root.accentColor : root.urgent
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.bodySmall
+                  font.bold: true
+                }
               }
             }
           }
@@ -183,7 +146,7 @@ Panel {
         // 2. Status Banner
         Rectangle {
           width: parent.width
-          height: statusText.implicitHeight + Style.space(12)
+          implicitHeight: statusText.implicitHeight + Style.space(12)
           radius: Math.min(Style.cornerRadius, 6)
           color: {
             if (!root.userData || !root.userData.valid) return Qt.rgba(0.5, 0.5, 0.5, 0.12)
@@ -213,31 +176,12 @@ Panel {
           }
         }
 
-        // 3. Courses Section Header
-        Item {
-          width: parent.width
-          height: Style.space(16)
+        // 3. Courses Header
+        PanelSectionHeader {
           visible: root.userData && root.userData.valid && root.userData.courses.length > 0
-
-          Text {
-            text: "COURSES"
-            color: root.dim
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            font.letterSpacing: 1
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-          }
-
-          Text {
-            text: "TOTAL: " + (root.userData ? Model.formatNumber(root.userData.totalXp) : "0") + " XP"
-            color: root.accentColor
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            font.bold: true
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-          }
+          text: "COURSES · " + (root.userData ? Model.formatNumber(root.userData.totalXp) : "0") + " XP"
+          foreground: root.foreground
+          fontFamily: root.fontFamily
         }
 
         // 4. Courses List
@@ -252,8 +196,8 @@ Panel {
             Rectangle {
               required property var modelData
               required property int index
-              width: mainColumn.width
-              height: Style.space(34)
+              width: parent.width
+              implicitHeight: Style.space(34)
               radius: Math.min(Style.cornerRadius, 6)
               color: index === root.selectedCourseIndex ? Style.hoverFillFor(root.foreground, Color.accent) : Qt.rgba(1, 1, 1, 0.04)
 
@@ -276,7 +220,7 @@ Panel {
 
                   Item {
                     width: parent.width
-                    height: Style.space(14)
+                    implicitHeight: Style.space(14)
 
                     Text {
                       text: modelData.title
@@ -299,7 +243,7 @@ Panel {
 
                   Rectangle {
                     width: parent.width
-                    height: 3
+                    implicitHeight: 3
                     radius: 1.5
                     color: Qt.rgba(1, 1, 1, 0.08)
 
@@ -326,14 +270,18 @@ Panel {
           }
         }
 
-        // 5. Action Buttons
+        PanelSeparator {
+          foreground: root.foreground
+        }
+
+        // 5. Action Buttons Row
         Row {
           width: parent.width
           spacing: Style.space(6)
 
           Rectangle {
-            width: mainColumn.width - Style.space(76)
-            height: Style.space(34)
+            width: parent.width - (Style.space(34) * 2 + Style.space(12))
+            implicitHeight: Style.space(34)
             radius: Math.min(Style.cornerRadius, 6)
             color: practiceMouse.containsMouse ? Qt.darker(root.accentColor, 1.2) : root.accentColor
 
@@ -361,7 +309,7 @@ Panel {
 
           Rectangle {
             width: Style.space(34)
-            height: Style.space(34)
+            implicitHeight: Style.space(34)
             radius: Math.min(Style.cornerRadius, 6)
             color: refreshMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.08)
 
@@ -382,7 +330,7 @@ Panel {
 
           Rectangle {
             width: Style.space(34)
-            height: Style.space(34)
+            implicitHeight: Style.space(34)
             radius: Math.min(Style.cornerRadius, 6)
             color: root.settingsOpen || settingsMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.08)
 
@@ -408,20 +356,14 @@ Panel {
           spacing: Style.space(6)
           visible: root.settingsOpen
 
-          Rectangle {
-            width: parent.width
-            height: 1
-            color: Qt.rgba(1, 1, 1, 0.1)
-          }
-
           Row {
             width: parent.width
             spacing: Style.space(6)
 
             TextField {
               id: usernameInput
-              width: mainColumn.width - Style.space(64)
-              height: Style.space(32)
+              width: parent.width - Style.space(64)
+              implicitHeight: Style.space(32)
               placeholderText: "Override username"
               text: settings.username || ""
               font.family: root.fontFamily
@@ -431,7 +373,7 @@ Panel {
 
             Rectangle {
               width: Style.space(58)
-              height: Style.space(32)
+              implicitHeight: Style.space(32)
               radius: Math.min(Style.cornerRadius, 4)
               color: saveMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.2) : Qt.rgba(1, 1, 1, 0.1)
 
