@@ -42,7 +42,7 @@ Panel {
 
   function launchDuolingo() {
     if (root.bar) {
-      root.bar.run("which duolingo-desktop >/dev/null 2>&1 && setsid duolingo-desktop || omarchy-launch-webapp https://www.duolingo.com")
+      root.bar.run("~/.config/omarchy/plugins/user.duolingo/bin/launch-duo.sh")
     }
     root.close()
   }

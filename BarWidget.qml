@@ -124,7 +124,7 @@ BarWidget {
     onPressed: function(mouseButton) {
       if (mouseButton === Qt.RightButton) {
         if (root.bar) {
-          root.bar.run("which duolingo-desktop >/dev/null 2>&1 && setsid duolingo-desktop || omarchy-launch-webapp https://www.duolingo.com")
+          root.bar.run("~/.config/omarchy/plugins/user.duolingo/bin/launch-duo.sh")
         }
       } else if (mouseButton === Qt.MiddleButton) {
         root.refresh()

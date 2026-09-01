@@ -38,7 +38,7 @@ Item {
   }
 
   function launchDuolingo() {
-    notifyProc.command = ["bash", "-c", "which duolingo-desktop >/dev/null 2>&1 && setsid duolingo-desktop || omarchy-launch-webapp https://www.duolingo.com"]
+    notifyProc.command = ["bash", "-c", "~/.config/omarchy/plugins/user.duolingo/bin/launch-duo.sh"]
     notifyProc.running = true
   }
 
