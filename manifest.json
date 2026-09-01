@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "id": "user.duolingo",
+  "name": "Duolingo",
+  "version": "1.0.0",
+  "author": "danielxxomg",
+  "license": "MIT",
+  "description": "Duolingo companion for Omarchy. Real-time daily streak monitor, multilingual progress breakdown, and smart evening streak reminders.",
+  "homepage": "https://plugins.omarchy.org",
+  "repository": "https://github.com/danielxxomg/omarchy-duolingo",
+  "keywords": [
+    "duolingo",
+    "streak",
+    "language",
+    "education",
+    "learning",
+    "reminder"
+  ],
+  "kinds": [
+    "bar-widget",
+    "service"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml",
+    "service": "Service.qml"
+  },
+  "keepLoaded": false,
+  "barWidget": {
+    "displayName": "Duolingo",
+    "description": "Daily streak indicator with course breakdown popup and background reminders",
+    "category": "Education",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "username": "",
+      "refreshMinutes": 15,
+      "showXp": false,
+      "remindersEnabled": true,
+      "remindHour": 20
+    },
+    "schema": [
+      {
+        "key": "username",
+        "type": "string",
+        "label": "Duolingo Username (leave empty to auto-detect)",
+        "defaultValue": ""
+      },
+      {
+        "key": "refreshMinutes",
+        "type": "integer",
+        "label": "Refresh interval (minutes)",
+        "min": 5,
+        "max": 120,
+        "step": 5,
+        "defaultValue": 15
+      },
+      {
+        "key": "showXp",
+        "type": "boolean",
+        "label": "Show Total XP instead of streak on the bar",
+        "defaultValue": false
+      },
+      {
+        "key": "remindersEnabled",
+        "type": "boolean",
+        "label": "Evening reminder notifications",
+        "defaultValue": true
+      },
+      {
+        "key": "remindHour",
+        "type": "integer",
+        "label": "Reminder Hour (0-23)",
+        "min": 0,
+        "max": 23,
+        "step": 1,
+        "defaultValue": 20
+      }
+    ]
+  }
+}
