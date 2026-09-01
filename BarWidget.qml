@@ -13,6 +13,9 @@ BarWidget {
   readonly property int refreshMinutes: Math.max(5, parseInt(setting("refreshMinutes", 15), 10) || 15)
   readonly property bool showXp: setting("showXp", false) === true
 
+  readonly property color accentColor: Color.accent || "#58cc02"
+  readonly property color urgent: bar ? bar.urgent : Color.urgent
+
   property var userData: null
   property bool fetching: false
   property string lastError: ""
@@ -114,22 +117,52 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: Model.barText(root.userData, root.showXp)
-    tooltipText: Model.tooltipText(root.userData)
-    labelVisible: true
+    text: ""
+    labelVisible: false
     hasVisualContent: true
-    horizontalMargin: 8.5
-    verticalPadding: 6
+    fixedWidth: root.vertical ? -1 : Math.round(barContent.implicitWidth + Style.spaceReal(8.5) * 2)
+    tooltipText: Model.tooltipText(root.userData)
 
     onPressed: function(mouseButton) {
       if (mouseButton === Qt.RightButton) {
         if (root.bar) {
-          root.bar.run("~/.config/omarchy/plugins/user.duolingo/bin/launch-duo.sh")
+          root.bar.run(Quickshell.env("HOME") + "/.config/omarchy/plugins/user.duolingo/bin/launch-duo.sh")
         }
       } else if (mouseButton === Qt.MiddleButton) {
         root.refresh()
       } else {
         root.togglePanel()
+      }
+    }
+
+    Row {
+      id: barContent
+      anchors.centerIn: parent
+      spacing: Style.space(5)
+
+      Image {
+        source: Qt.resolvedUrl("assets/duo.png")
+        width: Style.space(16)
+        height: Style.space(16)
+        fillMode: Image.PreserveAspectFit
+        anchors.verticalCenter: parent.verticalCenter
+      }
+
+      Text {
+        text: {
+          if (!root.userData || !root.userData.valid) return "Duo"
+          if (root.showXp) return Model.formatNumber(root.userData.totalXp) + " XP"
+          return String(root.userData.streak)
+        }
+        color: {
+          if (!root.userData || !root.userData.valid) return button.foreground
+          if (root.userData.streakExtendedToday) return root.accentColor
+          return root.urgent
+        }
+        font.family: button.fontFamily
+        font.pixelSize: button.fontSize
+        font.bold: true
+        anchors.verticalCenter: parent.verticalCenter
       }
     }
   }

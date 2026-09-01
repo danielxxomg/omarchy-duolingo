@@ -42,7 +42,7 @@ Panel {
 
   function launchDuolingo() {
     if (root.bar) {
-      root.bar.run("~/.config/omarchy/plugins/user.duolingo/bin/launch-duo.sh")
+      root.bar.run(Quickshell.env("HOME") + "/.config/omarchy/plugins/user.duolingo/bin/launch-duo.sh")
     }
     root.close()
   }
@@ -102,14 +102,16 @@ Panel {
         anchors.margins: Style.space(16)
         spacing: Style.space(14)
 
-        // 1. Header / Hero
+        // 1. Header / Hero with official mascot
         RowLayout {
           Layout.fillWidth: true
           spacing: Style.space(12)
 
-          Text {
-            text: "🦉"
-            font.pixelSize: Style.font.displayLarge || 32
+          Image {
+            source: (root.userData && root.userData.avatar) ? root.userData.avatar : Qt.resolvedUrl("assets/duo.png")
+            width: Style.space(42)
+            height: Style.space(42)
+            fillMode: Image.PreserveAspectFit
             Layout.alignment: Qt.AlignVCenter
           }
 
