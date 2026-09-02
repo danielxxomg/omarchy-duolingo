@@ -115,7 +115,7 @@ function barText(data, showXp) {
 }
 
 function tooltipText(data) {
-  if (!data || !data.valid) return "Duolingo: Detecting user account..."
+  if (!data || !data.valid) return "Duolingo: Set your username in settings."
   var status = data.streakExtendedToday ? "Streak completed for today" : "Daily lesson pending"
   return "Duolingo (@" + data.username + ") · " + data.streak + " day streak · " + formatNumber(data.totalXp) + " XP · " + status
 }

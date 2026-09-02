@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "user.duolingo",
   "name": "Duolingo",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "author": "danielxxomg",
   "license": "MIT",
   "description": "Duolingo companion for Omarchy. Real-time daily streak monitor, multilingual progress breakdown, and smart evening streak reminders.",

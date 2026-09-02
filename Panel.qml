@@ -50,7 +50,7 @@ Panel {
   readonly property bool effectiveShowXp: service ? service.showXp : (settings.showXp === true)
   readonly property bool effectiveReminders: service ? service.remindersEnabled : (settings.remindersEnabled !== false)
   readonly property int effectiveRemindHour: service ? service.remindHour : Util.clamp(parseInt(settings.remindHour !== undefined ? settings.remindHour : 20, 10) || 20, 0, 23)
-  readonly property bool effectiveAutoDetect: service ? service.autoDetect : (settings.autoDetect !== false)
+  readonly property bool effectiveAutoDetect: service ? service.autoDetect : (settings.autoDetect === true)
 
   function open() {
     root.controller.show()
@@ -144,7 +144,7 @@ Panel {
         // 1. Native Omarchy Hero
         PanelHero {
           title: root.effectiveData && root.effectiveData.valid ? root.effectiveData.fullname : "Duolingo Tracker"
-          meta: root.effectiveData && root.effectiveData.valid ? ("@" + root.effectiveData.username) : "Looking for session..."
+          meta: root.effectiveData && root.effectiveData.valid ? ("@" + root.effectiveData.username) : (root.hasConfiguredUsername ? "Fetching stats..." : "Set your username in Settings")
           foreground: root.foreground
           fontFamily: root.fontFamily
           iconComponent: Component {
@@ -236,7 +236,7 @@ Panel {
             spacing: Style.space(8)
             Text {
               width: parent.width
-              text: "Set your Duolingo username in Settings"
+              text: "Enter your Duolingo username in Settings, or enable local detection below"
               color: root.dim
               font.family: root.fontFamily
               font.pixelSize: Style.font.bodySmall
@@ -966,7 +966,7 @@ Panel {
               Text {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - Style.space(50)
-                text: "Auto-detect username"
+                text: "Auto-detect username (scans browser/Duolingo app local storage)"
                 color: root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
