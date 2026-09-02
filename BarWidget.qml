@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Shapes
 import qs.Commons
 import qs.Ui
 import "Model.js" as Model
@@ -113,18 +114,66 @@ BarWidget {
       anchors.centerIn: parent
       spacing: Style.space(6)
 
+      // Duo icon wrapped in a daily-goal progress ring.
       Item {
+        id: ringItem
         width: Style.space(16)
         height: Style.space(16)
         implicitWidth: Style.space(16)
         implicitHeight: Style.space(16)
         anchors.verticalCenter: parent.verticalCenter
 
+        readonly property real frac: {
+          if (!root.userData || !root.userData.valid || root.goalXp <= 0) return 0
+          return Math.max(0, Math.min(1, root.xpToday / root.goalXp))
+        }
+        readonly property bool hasData: root.userData && root.userData.valid
+        readonly property color ringColor: hasData ? root.accentColor : "transparent"
+
+        Shape {
+          anchors.fill: parent
+          preferredRendererType: Shape.CurveRenderer
+          visible: ringItem.hasData
+          layer.enabled: true
+          layer.samples: 4
+
+          // Track
+          ShapePath {
+            strokeWidth: 1.5
+            strokeColor: root.userData && root.userData.streakExtendedToday
+                         ? Qt.rgba(root.ringItem.ringColor.r, root.ringItem.ringColor.g, root.ringItem.ringColor.b, 0.25)
+                         : Qt.rgba(0.5, 0.5, 0.5, 0.35)
+            fillColor: "transparent"
+            capStyle: ShapePath.RoundCap
+            PathAngleArc {
+              centerX: ringItem.width / 2; centerY: ringItem.height / 2
+              radiusX: ringItem.width / 2 - 1; radiusY: ringItem.height / 2 - 1
+              startAngle: -90; sweepAngle: 360
+            }
+          }
+
+          // Progress arc: fills clockwise from 12 o'clock as XP accumulates
+          ShapePath {
+            strokeWidth: 1.5
+            strokeColor: ringItem.ringColor
+            fillColor: "transparent"
+            capStyle: ShapePath.RoundCap
+            PathAngleArc {
+              centerX: ringItem.width / 2; centerY: ringItem.height / 2
+              radiusX: ringItem.width / 2 - 1; radiusY: ringItem.height / 2 - 1
+              startAngle: -90; sweepAngle: 360 * ringItem.frac
+            }
+          }
+        }
+
         Image {
           source: Qt.resolvedUrl("assets/duo.png")
           anchors.fill: parent
+          anchors.margins: 2
           fillMode: Image.PreserveAspectFit
           smooth: true
+          opacity: root.fetching ? 0.45 : 1.0
+          Behavior on opacity { NumberAnimation { duration: 220 } }
         }
       }
 
