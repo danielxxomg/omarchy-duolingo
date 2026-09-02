@@ -17,6 +17,8 @@ BarWidget {
   readonly property var userData: service ? service.userData : null
   readonly property bool fetching: service ? service.fetching === true : false
   readonly property string lastError: service ? service.lastError : ""
+  readonly property int xpToday: service ? service.xpToday : 0
+  readonly property int goalXp: service ? service.goalXp : 50
 
   function injectPanel() {
     var target = panelLoader.item
@@ -79,7 +81,14 @@ BarWidget {
     hasVisualContent: true
     fixedWidth: root.vertical ? -1 : Math.round(barRow.implicitWidth + Style.spaceReal(8.5) * 2)
     fixedHeight: root.vertical ? Style.bar.iconSlot : -1
-    tooltipText: Model.tooltipText(root.userData)
+    tooltipText: {
+      var base = Model.tooltipText(root.userData)
+      if (root.service && root.userData && root.userData.valid) {
+        base += " · " + root.xpToday + " / " + root.goalXp + " XP today"
+        if (root.service.goalMet) base += " — goal met"
+      }
+      return base
+    }
 
     onPressed: function(mouseButton) {
       if (mouseButton === Qt.RightButton) {

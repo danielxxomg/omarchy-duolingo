@@ -30,6 +30,21 @@ Panel {
 
   property int selectedCourseIndex: 0
   property bool settingsOpen: false
+  property bool keysOpen: false
+
+  readonly property bool reducedMotion: service ? service.reducedMotion === true : false
+  readonly property int xpToday: service ? service.xpToday : 0
+  readonly property int goalXp: service ? service.goalXp : 50
+  readonly property bool goalMet: xpToday >= goalXp
+  readonly property real goalFraction: Model.fraction(xpToday, goalXp)
+  readonly property var weekData: service ? service.weekHistory : Model.weekHistory(null)
+  readonly property bool hasHistory: service && service.history && service.history.days && Object.keys(service.history.days).length > 0
+  readonly property bool hasConfiguredUsername: {
+    var su = service ? String(service.configuredUsername || "").trim() : ""
+    if (su !== "") return true
+    var ss = settings.username !== undefined ? String(settings.username).trim() : ""
+    return ss !== ""
+  }
 
   function open() {
     root.controller.show()
@@ -95,6 +110,7 @@ Panel {
       onTextKey: function(t) {
         if (t === "r" || t === "R") root.refresh()
         else if (t === "s" || t === "S") root.settingsOpen = !root.settingsOpen
+        else if (t === "?") root.keysOpen = !root.keysOpen
         else if (t === "q" || t === "Q") root.close()
       }
 
@@ -184,7 +200,197 @@ Panel {
           }
         }
 
-        // 3. Courses Header
+        // 3. Empty username prompt
+        Rectangle {
+          width: parent.width
+          implicitHeight: emptyCol.implicitHeight + Style.space(12)
+          radius: Math.min(Style.cornerRadius, 6)
+          color: Qt.rgba(0.5, 0.5, 0.5, 0.12)
+          visible: !root.hasConfiguredUsername && (!root.effectiveData || !root.effectiveData.valid)
+          Column {
+            id: emptyCol
+            anchors.centerIn: parent
+            width: parent.width - Style.space(16)
+            spacing: Style.space(8)
+            Text {
+              width: parent.width
+              text: "Set your Duolingo username in Settings"
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+              wrapMode: Text.WordWrap
+              horizontalAlignment: Text.AlignHCenter
+            }
+            Rectangle {
+              anchors.horizontalCenter: parent.horizontalCenter
+              implicitWidth: goSettingsText.implicitWidth + Style.space(16)
+              implicitHeight: Style.space(28)
+              radius: Math.min(Style.cornerRadius, 6)
+              color: settingsMouse2.containsMouse ? Qt.darker(root.accentColor, 1.1) : root.accentColor
+              Text {
+                id: goSettingsText
+                anchors.centerIn: parent
+                text: "Open Settings"
+                color: "#ffffff"
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+              }
+              MouseArea {
+                id: settingsMouse2
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.settingsOpen = true
+              }
+            }
+          }
+        }
+
+        // 4. Today goal progress
+        Column {
+          width: parent.width
+          spacing: Style.space(6)
+          visible: root.hasConfiguredUsername && root.effectiveData && root.effectiveData.valid
+
+          Item {
+            width: parent.width
+            implicitHeight: Math.max(todayLabel.implicitHeight, todayCaption.implicitHeight)
+            Text {
+              id: todayLabel
+              anchors.left: parent.left
+              anchors.baseline: todayCaption.baseline
+              text: "TODAY"
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 1.2
+              topPadding: Math.ceil(Style.font.caption * 0.15)
+            }
+            Text {
+              id: todayCaption
+              anchors.right: parent.right
+              anchors.top: parent.top
+              text: root.xpToday + " / " + root.goalXp + " XP today"
+              color: root.goalMet ? root.accentColor : Qt.rgba(0.95, 0.6, 0.0, 1)
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+            }
+          }
+
+          Rectangle {
+            width: parent.width
+            height: 4
+            radius: 2
+            color: Qt.rgba(1, 1, 1, 0.08)
+            Rectangle {
+              height: parent.height
+              width: parent.width * Math.max(0, Math.min(1, root.goalFraction))
+              radius: parent.radius
+              color: root.goalMet ? root.accentColor : Qt.rgba(0.95, 0.6, 0.0, 1)
+              Behavior on width { enabled: !root.reducedMotion; NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+              Behavior on color { enabled: !root.reducedMotion; ColorAnimation { duration: 240 } }
+            }
+          }
+        }
+
+        // 5. This week
+        Column {
+          width: parent.width
+          spacing: Style.space(6)
+
+          Item {
+            width: parent.width
+            implicitHeight: Math.max(weekLabel.implicitHeight, weekCaption.implicitHeight)
+            Text {
+              id: weekLabel
+              anchors.left: parent.left
+              anchors.baseline: weekCaption.baseline
+              text: "THIS WEEK"
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              font.letterSpacing: 1.2
+              topPadding: Math.ceil(Style.font.caption * 0.15)
+            }
+            Text {
+              id: weekCaption
+              anchors.right: parent.right
+              anchors.top: parent.top
+              text: root.hasHistory ? "" : "Your first day of tracking starts now"
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+            }
+          }
+
+          Row {
+            width: parent.width
+            spacing: Style.space(4)
+            visible: true
+            Repeater {
+              model: root.weekData
+              delegate: Item {
+                required property var modelData
+                width: (parent.width - 6 * Style.space(4)) / 7
+                height: Style.space(48)
+
+                Column {
+                  anchors.fill: parent
+                  spacing: Style.space(4)
+
+                  Rectangle {
+                    width: parent.width
+                    height: Style.space(28)
+                    radius: Math.min(Style.cornerRadius, 4)
+                    color: modelData.today ? Qt.rgba(1,1,1,0.08) : Qt.rgba(1,1,1,0.04)
+                    border.width: modelData.today ? 1 : 0
+                    border.color: modelData.today ? Qt.rgba(1,1,1,0.12) : "transparent"
+
+                    Rectangle {
+                      anchors.bottom: parent.bottom
+                      anchors.left: parent.left
+                      anchors.right: parent.right
+                      anchors.margins: 2
+                      height: {
+                        if (!modelData.hasData || modelData.xpEarned <= 0) return 2
+                        var maxXp = root.goalXp
+                        for (var i = 0; i < root.weekData.length; i++) if (root.weekData[i].xpEarned > maxXp) maxXp = root.weekData[i].xpEarned
+                        var f = Math.max(0, Math.min(1, modelData.xpEarned / maxXp))
+                        return Math.max(2, (parent.height - 4) * f)
+                      }
+                      radius: 2
+                      color: modelData.today ? (root.goalMet ? root.accentColor : Qt.rgba(0.95,0.6,0.0,1)) : Qt.rgba(1,1,1,0.18)
+                      Behavior on height { enabled: !root.reducedMotion; NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+                    }
+                  }
+
+                  Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: modelData.letter
+                    color: modelData.today ? root.foreground : root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    font.bold: modelData.today
+                  }
+
+                  Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: modelData.hasData && modelData.xpEarned > 0 ? String(modelData.xpEarned) : ""
+                    color: root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: 9
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // 6. Courses Header
         PanelSectionHeader {
           visible: root.effectiveData && root.effectiveData.valid && root.effectiveData.courses.length > 0
           text: "COURSES · " + (root.effectiveData ? Model.formatNumber(root.effectiveData.totalXp) : "0") + " XP"
@@ -360,7 +566,83 @@ Panel {
           }
         }
 
-        // 6. Settings Drawer
+        // Footer hint and KeysCard
+        Text {
+          width: parent.width
+          text: "Press ? for shortcuts  ·  j/k navigate  ·  Enter practice  ·  r refresh  ·  s settings"
+          color: root.dim
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+          horizontalAlignment: Text.AlignHCenter
+          wrapMode: Text.WordWrap
+          visible: !root.keysOpen
+        }
+
+        Item {
+          id: keysHost
+          width: parent.width
+          implicitHeight: root.keysOpen ? keysCard.implicitHeight : 0
+          height: implicitHeight
+          clip: true
+          visible: height > 0.5
+          Behavior on implicitHeight { enabled: !root.reducedMotion; NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+
+          Rectangle {
+            id: keysCard
+            width: parent.width
+            implicitHeight: keysCol.implicitHeight + Style.space(12)
+            radius: Math.min(Style.cornerRadius, 6)
+            color: Qt.rgba(1, 1, 1, 0.05)
+            border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.08)
+            Column {
+              id: keysCol
+              x: Style.space(8)
+              y: Style.space(6)
+              width: parent.width - Style.space(16)
+              spacing: Style.space(4)
+              Repeater {
+                model: [["j / k","Navigate courses"], ["Enter","Start practice"], ["r","Refresh stats"], ["s","Toggle settings"], ["?","Toggle this help"], ["Esc / q","Close panel"]]
+                delegate: Item {
+                  required property var modelData
+                  width: keysCol.width
+                  height: Style.space(18)
+                  Rectangle {
+                    id: keyCap
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: capText.implicitWidth + Style.space(8)
+                    height: capText.implicitHeight + Style.space(4)
+                    radius: Math.min(Style.cornerRadius, 4)
+                    color: Qt.rgba(1,1,1,0.08)
+                    Text {
+                      id: capText
+                      anchors.centerIn: parent
+                      text: modelData[0]
+                      color: root.foreground
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      font.bold: true
+                    }
+                  }
+                  Text {
+                    anchors.left: keyCap.right
+                    anchors.leftMargin: Style.space(8)
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.right: parent.right
+                    text: modelData[1]
+                    color: root.dim
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    elide: Text.ElideRight
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // 7. Settings Drawer
         Column {
           width: parent.width
           spacing: Style.space(6)
