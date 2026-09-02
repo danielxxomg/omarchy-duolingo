@@ -109,14 +109,14 @@ function formatNumber(num) {
 }
 
 function barText(data, showXp) {
-  if (!data || !data.valid) return "󰂚 Duo"
-  if (showXp) return "󰂚 " + formatNumber(data.totalXp) + " XP"
-  return "🔥 " + data.streak
+  if (!data || !data.valid) return "Duo"
+  if (showXp) return formatNumber(data.totalXp) + " XP"
+  return String(data.streak)
 }
 
 function tooltipText(data) {
-  if (!data || !data.valid) return "Duolingo: Detecting user account…"
-  var status = data.streakExtendedToday ? "Streak saved today! 🎉" : "Daily lesson pending! ⚠️"
+  if (!data || !data.valid) return "Duolingo: Detecting user account..."
+  var status = data.streakExtendedToday ? "Streak completed for today" : "Daily lesson pending"
   return "Duolingo (@" + data.username + ") · " + data.streak + " day streak · " + formatNumber(data.totalXp) + " XP · " + status
 }
 

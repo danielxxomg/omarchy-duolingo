@@ -25,7 +25,7 @@ o.bind("SUPER + CTRL + D", "Duolingo Tracker", "omarchy-shell user.duolingo togg
 
 ### 3. Verify in Terminal
 ```bash
-omarchy-shell duolingo status
+omarchy-shell user.duolingo status
 ```
 
 ---
@@ -110,7 +110,7 @@ Integrate with custom scripts, Waybar, or polybar:
 omarchy-shell user.duolingo toggle   # Toggle popup panel
 omarchy-shell user.duolingo launch   # Launch preferred Duolingo client
 omarchy-shell user.duolingo refresh  # Refresh stats from API
-omarchy-shell duolingo status        # Output single-line text summary
+omarchy-shell user.duolingo status   # Output single-line text summary
 ```
 
 ---

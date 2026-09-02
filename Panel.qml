@@ -85,8 +85,9 @@ Panel {
       onCloseRequested: root.close()
       onReturnRequested: root.launchDuolingo()
       onMoveRequested: function(dx, dy) {
-        if (!root.userData || !root.userData.courses) return
-        var count = root.userData.courses.length
+        var d = root.effectiveData
+        if (!d || !d.courses) return
+        var count = d.courses.length
         if (count === 0) return
         if (dy > 0) root.selectedCourseIndex = (root.selectedCourseIndex + 1) % count
         else if (dy < 0) root.selectedCourseIndex = (root.selectedCourseIndex - 1 + count) % count
@@ -104,13 +105,13 @@ Panel {
 
         // 1. Native Omarchy Hero
         PanelHero {
-          title: root.userData && root.userData.valid ? root.userData.fullname : "Duolingo Tracker"
-          meta: root.userData && root.userData.valid ? ("@" + root.userData.username) : "Looking for session…"
+          title: root.effectiveData && root.effectiveData.valid ? root.effectiveData.fullname : "Duolingo Tracker"
+          meta: root.effectiveData && root.effectiveData.valid ? ("@" + root.effectiveData.username) : "Looking for session..."
           foreground: root.foreground
           fontFamily: root.fontFamily
           iconComponent: Component {
             Image {
-              source: (root.userData && root.userData.avatar) ? root.userData.avatar : Qt.resolvedUrl("assets/duo.png")
+              source: (root.effectiveData && root.effectiveData.avatar) ? root.effectiveData.avatar : Qt.resolvedUrl("assets/duo.png")
               width: Style.space(36)
               height: Style.space(36)
               fillMode: Image.PreserveAspectFit
@@ -122,7 +123,7 @@ Panel {
               implicitWidth: streakPillRow.implicitWidth + Style.space(12)
               implicitHeight: Style.space(26)
               radius: Math.min(Style.cornerRadius, 6)
-              color: root.userData && root.userData.streakExtendedToday ? Qt.rgba(0.34, 0.8, 0.01, 0.18) : Qt.rgba(1.0, 0.4, 0.0, 0.18)
+              color: root.effectiveData && root.effectiveData.streakExtendedToday ? Qt.rgba(0.34, 0.8, 0.01, 0.18) : Qt.rgba(1.0, 0.4, 0.0, 0.18)
 
               Row {
                 id: streakPillRow
@@ -130,12 +131,8 @@ Panel {
                 spacing: Style.space(4)
 
                 Text {
-                  text: "🔥"
-                  font.pixelSize: Style.font.caption
-                }
-                Text {
-                  text: root.userData && root.userData.valid ? String(root.userData.streak) : "0"
-                  color: root.userData && root.userData.streakExtendedToday ? root.accentColor : root.urgent
+                  text: root.effectiveData && root.effectiveData.valid ? String(root.effectiveData.streak) : "0"
+                  color: root.effectiveData && root.effectiveData.streakExtendedToday ? root.accentColor : root.urgent
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.bodySmall
                   font.bold: true
@@ -151,8 +148,9 @@ Panel {
           implicitHeight: statusText.implicitHeight + Style.space(12)
           radius: Math.min(Style.cornerRadius, 6)
           color: {
-            if (!root.userData || !root.userData.valid) return Qt.rgba(0.5, 0.5, 0.5, 0.12)
-            if (root.userData.streakExtendedToday) return Qt.rgba(0.34, 0.8, 0.01, 0.14)
+            if (!root.effectiveData || !root.effectiveData.valid) return Qt.rgba(0.5, 0.5, 0.5, 0.12)
+            if (root.effectiveStale) return Qt.rgba(0.5, 0.5, 0.5, 0.12)
+            if (root.effectiveData.streakExtendedToday) return Qt.rgba(0.34, 0.8, 0.01, 0.14)
             return Qt.rgba(1.0, 0.2, 0.2, 0.14)
           }
 
@@ -161,13 +159,21 @@ Panel {
             anchors.centerIn: parent
             width: parent.width - Style.space(16)
             text: {
-              if (!root.userData || !root.userData.valid) return "⚠️ Connecting to Duolingo account…"
-              if (root.userData.streakExtendedToday) return "🎉 Streak safe for today! Great habit."
-              return "🔥 Daily lesson pending! Practice today to keep your streak."
+              var data = root.effectiveData
+              var err = root.effectiveError
+              var stale = root.effectiveStale
+              if (!data || !data.valid) {
+                if (err) return err
+                return "Connecting to Duolingo account..."
+              }
+              if (stale) return "Offline — showing last saved data."
+              if (data.streakExtendedToday) return "Streak completed for today."
+              return "Daily lesson pending. Practice today to keep your streak."
             }
             color: {
-              if (!root.userData || !root.userData.valid) return root.dim
-              if (root.userData.streakExtendedToday) return root.accentColor
+              if (!root.effectiveData || !root.effectiveData.valid) return root.dim
+              if (root.effectiveStale) return root.dim
+              if (root.effectiveData.streakExtendedToday) return root.accentColor
               return root.urgent
             }
             font.family: root.fontFamily
@@ -180,8 +186,8 @@ Panel {
 
         // 3. Courses Header
         PanelSectionHeader {
-          visible: root.userData && root.userData.valid && root.userData.courses.length > 0
-          text: "COURSES · " + (root.userData ? Model.formatNumber(root.userData.totalXp) : "0") + " XP"
+          visible: root.effectiveData && root.effectiveData.valid && root.effectiveData.courses.length > 0
+          text: "COURSES · " + (root.effectiveData ? Model.formatNumber(root.effectiveData.totalXp) : "0") + " XP"
           foreground: root.foreground
           fontFamily: root.fontFamily
         }
@@ -190,10 +196,10 @@ Panel {
         Column {
           width: parent.width
           spacing: Style.space(4)
-          visible: root.userData && root.userData.valid && root.userData.courses.length > 0
+          visible: root.effectiveData && root.effectiveData.valid && root.effectiveData.courses.length > 0
 
           Repeater {
-            model: root.userData ? root.userData.courses : []
+            model: root.effectiveData ? root.effectiveData.courses : []
 
             Rectangle {
               required property var modelData
@@ -287,17 +293,13 @@ Panel {
             radius: Math.min(Style.cornerRadius, 6)
             color: practiceMouse.containsMouse ? Qt.darker(root.accentColor, 1.2) : root.accentColor
 
-            Row {
+            Text {
               anchors.centerIn: parent
-              spacing: Style.space(6)
-              Text { text: "🚀"; font.pixelSize: Style.font.caption }
-              Text {
-                text: "Start Practice (Enter)"
-                color: "#ffffff"
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.bodySmall
-                font.bold: true
-              }
+              text: "Start Practice (Enter)"
+              color: "#ffffff"
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+              font.bold: true
             }
 
             MouseArea {
@@ -317,8 +319,11 @@ Panel {
 
             Text {
               anchors.centerIn: parent
-              text: "🔄"
+              text: "R"
+              color: root.foreground
+              font.family: root.fontFamily
               font.pixelSize: Style.font.caption
+              font.bold: true
             }
 
             MouseArea {
@@ -338,8 +343,11 @@ Panel {
 
             Text {
               anchors.centerIn: parent
-              text: "⚙️"
+              text: "S"
+              color: root.foreground
+              font.family: root.fontFamily
               font.pixelSize: Style.font.caption
+              font.bold: true
             }
 
             MouseArea {

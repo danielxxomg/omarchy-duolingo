@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "id": "user.duolingo",
   "name": "Duolingo",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "danielxxomg",
   "license": "MIT",
   "description": "Duolingo companion for Omarchy. Real-time daily streak monitor, multilingual progress breakdown, and smart evening streak reminders.",
-  "homepage": "https://plugins.omarchy.org",
+  "homepage": "https://github.com/danielxxomg/omarchy-duolingo",
   "repository": "https://github.com/danielxxomg/omarchy-duolingo",
   "keywords": [
     "duolingo",
