@@ -185,7 +185,8 @@ function normalizeHistory(raw) {
           courses[String(lang)] = { xp: xp, crowns: crowns }
         }
       }
-      out.days[key] = { streak: streak, totalXp: totalXp, firstTotalXp: firstTotalXp, courses: courses }
+      var streakExtendedToday = day.streakExtendedToday === true
+      out.days[key] = { streak: streak, totalXp: totalXp, firstTotalXp: firstTotalXp, courses: courses, streakExtendedToday: streakExtendedToday }
       // keep minimal shape if firstTotalXp equals totalXp we still store it for clarity
     }
   }

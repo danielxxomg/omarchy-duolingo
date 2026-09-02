@@ -40,6 +40,7 @@ Item {
   property bool isStale: false
   property bool notifiedToday: false
   property string lastNotifiedDate: ""
+  property string lastCatchUpDate: ""
 
   property var history: Model.emptyHistory()
   property bool historyLoaded: false
@@ -148,6 +149,34 @@ Item {
     }
   }
 
+  // Offline catch-up: PC off at remindHour + failed fetch should still warn once, using last known history state.
+  function checkOfflineCatchUp() {
+    if (!root.remindersEnabled) return
+    if (!root.historyLoaded) return
+    if (root.userData && root.userData.valid) return
+    var hasFailure = root.lastError !== "" || (root.userData && !root.userData.valid)
+    if (!hasFailure) return
+    var todayKey = Model.dayKey(new Date())
+    if (root.lastCatchUpDate === todayKey) return
+    if (root.lastNotifiedDate !== todayKey) {
+      root.notifiedToday = false
+      root.lastNotifiedDate = todayKey
+    }
+    if (root.notifiedToday) return
+    var now = new Date()
+    if (now.getHours() < root.remindHour) return
+    var entry = root.history && root.history.days ? root.history.days[todayKey] : null
+    if (entry && entry.streakExtendedToday === true) return
+    root.lastCatchUpDate = todayKey
+    root.notifiedToday = true
+    root.lastNotifiedDate = todayKey
+    var title = "Duolingo streak pending — offline"
+    var body = "Your streak may be at risk. Complete a lesson soon to keep your streak alive."
+    notifyProc.command = ["notify-send", "-a", "Duolingo", "-u", "normal", "-i", root.iconPath,
+      "-h", "string:x-canonical-private-synchronous:duolingo", title, body]
+    notifyProc.running = true
+  }
+
   function updateHistory(data) {
     if (!data || !data.valid) return
     var todayKey = Model.dayKey(new Date())
@@ -166,10 +195,10 @@ Item {
     }
     var existing = days[todayKey]
     if (!existing) {
-      days[todayKey] = { streak: data.streak, totalXp: data.totalXp, firstTotalXp: data.totalXp, courses: coursesMap }
+      days[todayKey] = { streak: data.streak, totalXp: data.totalXp, firstTotalXp: data.totalXp, courses: coursesMap, streakExtendedToday: data.streakExtendedToday === true }
     } else {
       var first = existing.firstTotalXp !== undefined ? existing.firstTotalXp : existing.totalXp
-      days[todayKey] = { streak: data.streak, totalXp: data.totalXp, firstTotalXp: first, courses: coursesMap }
+      days[todayKey] = { streak: data.streak, totalXp: data.totalXp, firstTotalXp: first, courses: coursesMap, streakExtendedToday: data.streakExtendedToday === true }
     }
     days = Model.pruneHistory(days, todayKey)
     var next = { rev: h.rev || 0, days: days, updatedAt: new Date().toISOString() }
@@ -255,6 +284,7 @@ Item {
         root.history = Model.normalizeHistory(parsed)
         root.historyLoaded = true
         if (root.saveQueued) { root.saveQueued = false; root.saveHistory() }
+        root.checkOfflineCatchUp()
       }
     }
   }
