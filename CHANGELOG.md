@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-09-02
+
+### Added
+- **Overlay (`Overlay.qml` + `Commands.js`)**: Full-screen PanelWindow (`WlrLayershell` Overlay/Exclusive, `duolingo-overlay` namespace) with `open(payloadJson)`/`finishClose()->shell.hide("user.duolingo")` lifecycle, focused-screen resolution, dark scrim (0.78) with green gradient, and `Commands.js` verb grammar mirroring hydrate's contract (`score`/`verbScore`/`suggest`/`parse`/`execute`/`contextOf`/`helpRows`).
+- **Command palette**: Ghost completion, suggestions list (Up/Down, Tab to accept), live preview row, toast feedback, shake on error, `PgUp`/`PgDn` pane cycling. Panes: `today` (goal + streak + courses), `history` (recent days from `history.json`), `help` (all verbs). `Esc` clears input first, then closes. `Enter` submits. `reducedMotion` disables ignition sweep and shortens transitions.
+- **Verbs**: `practice` (launch), `refresh`, `open`/`panel` (close overlay), `username <name>` (persist via `shell.updateEntryInline`, validated `^[A-Za-z0-9_.-]{2,25}$`), `goal <n>` (10-1000, bare number also sets goal), `streak`/`xp`/`today` (read-only info), `history`/`help`/`?` (pane switches), `quit`/`q`/`close`/`exit` (close). Unknown input shows suggestions, never executes.
+- **Service IPC**: `shell.toggle("user.duolingo")` overlay entry point, `runCommand(text)` + `IpcHandler` actions `overlay` and `run` (extend `user.duolingo` target). Helpers `setUsername`/`setGoal`/`setSettings` via `updateEntryInline`. Bar tooltip now mentions overlay access.
+- **Hero visual**: Large streak number + `xpToday / goalXp` arc (270 degree `Shape` track + progress with glow + tick ring, ignition sweep on open), week strip reuse of `weekHistory`, subtle `duo.svg` feather at low opacity.
+- **Manifest**: Added `overlay` to `kinds` and `entryPoints {overlay:"Overlay.qml"}` (order `bar-widget`, `overlay`, `service` like hydrate). Version bump to 1.3.0.
+
 ## [1.2.0] - 2026-09-02
 
 ### Added

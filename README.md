@@ -37,6 +37,7 @@ omarchy-shell user.duolingo status
 | **Bar Pill (`BarWidget.qml`)** | Shows the streak number (e.g. `45`). Accent green when today is done, amber when pending. Tooltip includes daily goal progress. |
 | **Popup Panel (`Panel.qml`)** | Today goal bar (XP today vs goal), 7-day week strip, full course breakdown with language flags and XP bars, and one-click practice launch. Settings face covers all options; `?` reveals keyboard shortcuts. |
 | **Background Daemon (`Service.qml`)** | Persists daily snapshots to `~/.local/state/duolingo/history.json`, fires desktop notification at the configured hour if your lesson is still pending. |
+| **Overlay (`Overlay.qml`)** | Full-screen command palette: large streak arc with goal progress, week strip, command line with ghost completion, and panes for today, history, and help. Handles verb grammar via `Commands.js`. |
 | **Zero-Config (`bin/detect-user.py`)** | Reads your local Duolingo desktop or browser session to resolve your username with 0 manual steps. |
 | **Universal Launcher (`bin/launch-duo.sh`)** | Launches native AUR binary, Flatpak DL-Desktop, Omarchy WebApp, or default browser fallback. |
 
@@ -55,6 +56,12 @@ omarchy-shell user.duolingo status
 | **Popup Panel** | Open settings drawer | `s` |
 | **Popup Panel** | Toggle shortcuts help | `?` |
 | **Popup Panel** | Close popup | `Esc` or `q` |
+| **Overlay** | Open overlay | `omarchy-shell user.duolingo overlay` or `SUPER + CTRL + G` (optional keybinding) |
+| **Overlay** | Submit command | `Enter` |
+| **Overlay** | Accept ghost completion | `Tab` |
+| **Overlay** | Cycle suggestions | `Up` / `Down` |
+| **Overlay** | Switch panes (today/history/help) | `PgUp` / `PgDn` |
+| **Overlay** | Clear input, then close | `Esc` |
 
 ---
 
@@ -107,16 +114,62 @@ Configure directly via the popup settings drawer (`s`) or in `~/.config/omarchy/
 
 ---
 
+## Overlay
+
+Full-screen command palette reached via IPC or an optional keybinding. Right click on the bar keeps launching Duolingo; overlay is accessed separately so existing muscle memory is preserved.
+
+```bash
+omarchy-shell user.duolingo overlay              # Open the overlay
+omarchy-shell user.duolingo run "help"           # Execute a command without opening the overlay
+omarchy-shell user.duolingo run "goal 100"       # Set daily goal to 100 XP
+omarchy-shell user.duolingo run "username duo_learner"  # Set username
+```
+
+Optional keybinding in `~/.config/hypr/bindings.lua` (commented suggestion in `install.sh`):
+
+```lua
+-- o.bind("SUPER + CTRL + G", "Duolingo Overlay", "omarchy-shell user.duolingo overlay")
+-- or: o.bind("SUPER + CTRL + G", "Duolingo Help", "omarchy-shell user.duolingo run help")
+```
+
+The overlay shows a large streak and goal arc (ignition sweep on open, disabled when `reducedMotion` is true), a week strip derived from `history.json`, and a command line on the right. Panes: `today` (goal + streak + courses), `history` (recent days from history), `help` (all verbs).
+
+| Command | Aliases | Example | Description |
+| :--- | :--- | :--- | :--- |
+| `practice` | `p`, `learn`, `go` | `practice` | Launch Duolingo |
+| `refresh` | `r`, `reload`, `sync` | `refresh` | Refresh stats from API |
+| `open` | `panel` | `open` | Close overlay (and reveal panel) |
+| `username <name>` | `user`, `name`, `u` | `username duo_learner` | Set Duolingo username (2-25 chars, `^[A-Za-z0-9_.-]+$`) |
+| `goal <n>` | `target` | `goal 100` or `100` | Set daily XP goal 10-1000 (bare number also sets goal) |
+| `streak` |  | `streak` | Show current streak |
+| `xp` |  | `xp` | Show total XP |
+| `today` | `t`, `now` | `today` | Show today's XP progress |
+| `history` | `h`, `log` | `history` | Switch to history pane |
+| `help` | `?` | `help` | Switch to help pane |
+| `quit` | `q`, `close`, `exit` | `quit` | Close the overlay |
+
+Ghost completion shows the remainder of the top suggestion; `Tab` accepts it. Arrow keys cycle suggestions. `PgUp`/`PgDn` cycles panes. `Esc` clears the input first, then closes.
+
+---
+
 ## IPC Reference
 
 Integrate with custom scripts, Waybar, or polybar:
 
 ```bash
-omarchy-shell user.duolingo toggle   # Toggle popup panel
-omarchy-shell user.duolingo launch   # Launch preferred Duolingo client
-omarchy-shell user.duolingo refresh  # Refresh stats from API
-omarchy-shell user.duolingo status   # Output single-line text summary
+omarchy-shell user.duolingo toggle            # Toggle popup panel
+omarchy-shell user.duolingo launch            # Launch preferred Duolingo client
+omarchy-shell user.duolingo refresh           # Refresh stats from API
+omarchy-shell user.duolingo status            # Output single-line text summary
+omarchy-shell user.duolingo streak            # Output streak count
+omarchy-shell user.duolingo overlay           # Open full-screen overlay
+omarchy-shell user.duolingo run "<command>"   # Run any overlay command (see table above)
 ```
+
+| Version | Manifest kinds | Entry points |
+| :--- | :--- | :--- |
+| 1.2.0 | `bar-widget`, `service` | `barWidget`, `service` |
+| 1.3.0 | `bar-widget`, `overlay`, `service` | `barWidget`, `overlay`, `service` |
 
 ---
 

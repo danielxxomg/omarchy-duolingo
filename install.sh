@@ -58,6 +58,12 @@ if [[ -f "$BINDINGS_FILE" ]] && ! grep -q "user.duolingo" "$BINDINGS_FILE"; then
   echo -e '\no.bind("SUPER + CTRL + D", "Duolingo Tracker", "omarchy-shell user.duolingo toggle")' >> "$BINDINGS_FILE"
 fi
 
+# Optional overlay keybinding (commented, not auto-added):
+# Uncomment to enable SUPER + CTRL + G for the full-screen overlay:
+# o.bind("SUPER + CTRL + G", "Duolingo Overlay", "omarchy-shell user.duolingo overlay")
+# Alternative: direct help command without opening overlay UI:
+# o.bind("SUPER + CTRL + G", "Duolingo Help", "omarchy-shell user.duolingo run help")
+
 # 5. Rescan and restart shell
 echo -e "\n\e[32mRestarting shell to apply changes...\e[0m"
 omarchy restart shell
