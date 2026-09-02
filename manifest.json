@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "user.duolingo",
   "name": "Duolingo",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "danielxxomg",
   "license": "MIT",
   "description": "Duolingo companion for Omarchy. Real-time daily streak monitor, multilingual progress breakdown, and smart evening streak reminders.",
@@ -18,10 +18,12 @@
   ],
   "kinds": [
     "bar-widget",
+    "overlay",
     "service"
   ],
   "entryPoints": {
     "barWidget": "BarWidget.qml",
+    "overlay": "Overlay.qml",
     "service": "Service.qml"
   },
   "keepLoaded": false,
