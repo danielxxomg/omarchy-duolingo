@@ -19,7 +19,7 @@ Item {
   }
 
   readonly property string configuredUsername: String(widgetSetting("username", ""))
-  readonly property bool autoDetect: widgetSetting("autoDetect", true) !== false
+  readonly property bool autoDetect: widgetSetting("autoDetect", false) === true
   readonly property int refreshMinutes: Math.max(5, parseInt(widgetSetting("refreshMinutes", 15), 10) || 15)
   readonly property bool remindersEnabled: widgetSetting("remindersEnabled", true) !== false
   readonly property int remindHour: Util.clamp(parseInt(widgetSetting("remindHour", 20), 10) || 20, 0, 23)
@@ -272,6 +272,10 @@ Item {
   }
 
   // ---------------------------------------------------------------- persistence
+  // History I/O is delegated to bin/state-io.py: the payload travels on
+  // stdin (never argv), reads are no-follow/capped, writes are exclusive
+  // 0600 atomic renames with rev revalidation and fsync (see duoio.py).
+
   Process {
     id: historyReader
     running: false
@@ -279,7 +283,9 @@ Item {
       waitForEnd: true
       onStreamFinished: {
         var parsed = null
-        try { parsed = text.trim() === "" ? null : JSON.parse(text) } catch (e) { parsed = null }
+        var raw = String(text || "").trim()
+        // Refusals exit non-zero with empty output; treat both as no state.
+        try { parsed = raw === "" ? null : JSON.parse(raw) } catch (e) { parsed = null }
         root.diskRev = parsed && isFinite(Number(parsed.rev)) ? Math.max(0, Math.round(Number(parsed.rev))) : 0
         root.history = Model.normalizeHistory(parsed)
         root.historyLoaded = true
@@ -291,19 +297,23 @@ Item {
 
   function loadHistory() {
     if (historyReader.running) return
-    historyReader.command = ["bash", "-c",
-      'f="$0"; [ -e "$f" ] || exit 0; [ -L "$f" ] && exit 1; exec 3<>"$f" || exit 1; '
-      + '[ "$(stat -Lc %F /proc/self/fd/3)" = "regular file" ] || exit 1; '
-      + 'head -c ' + root.maxStateBytes + ' <&3',
-      root.stateFilePath]
+    historyReader.command = [root.pluginDir + "/bin/state-io.py", "read"]
     historyReader.running = true
   }
 
   Process {
     id: historyWriter
     running: false
+    stdinEnabled: false
+    onStarted: {
+      historyWriter.stdinEnabled = true
+      historyWriter.write(root.pendingWritePayload)
+      historyWriter.stdinEnabled = false
+    }
     onExited: function(code, status) {
       if (code === 3) {
+        // Equal or newer revision already on disk: reload and drop ours.
+        root.diskRevUnchanged = true
         root.loadHistory()
         return
       }
@@ -314,20 +324,18 @@ Item {
     }
   }
 
+  property string pendingWritePayload: ""
+  property bool diskRevUnchanged: false
+
   function saveHistory() {
     if (!root.historyLoaded || root.dead) return
     if (historyWriter.running || historyReader.running) { root.saveQueued = true; return }
     root.writingRev = root.diskRev + 1
     var body = JSON.stringify(root.history)
-    // Ensure rev is first key for grep-friendly writes
-    var payload = '{"rev":' + root.writingRev + ',' + body.slice(1)
-    historyWriter.command = ["bash", "-c",
-      'mkdir -p "$0" || exit 1; '
-      + 'if [ -f "$1" ] && [ ! -L "$1" ]; then cur=$(head -c 64 "$1" | sed -n \'s/^{ *"rev": *\\([0-9]*\\).*/\\1/p\'); '
-      + '  [ -n "$cur" ] && [ "$cur" -ge "$3" ] && exit 3; fi; '
-      + 'tmp=$(mktemp "$0/.duolingo.XXXXXXXX") && printf \'%s\' "$2" > "$tmp" '
-      + '&& mv -f "$tmp" "$1" || { rm -f "$tmp"; exit 1; }',
-      root.stateDir, root.stateFilePath, payload, String(root.writingRev)]
+    // Ensure rev is the first key for bounded on-disk revalidation.
+    root.pendingWritePayload = '{"rev":' + root.writingRev + ',' + body.slice(1)
+    if (root.pendingWritePayload.length > root.maxStateBytes) return
+    historyWriter.command = [root.pluginDir + "/bin/state-io.py", "write", String(root.writingRev)]
     historyWriter.running = true
   }
 

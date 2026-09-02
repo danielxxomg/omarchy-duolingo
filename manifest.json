@@ -35,7 +35,7 @@
     "defaultSection": "right",
     "defaults": {
       "username": "",
-      "autoDetect": true,
+      "autoDetect": false,
       "refreshMinutes": 15,
       "showXp": false,
       "remindersEnabled": true,
@@ -47,14 +47,14 @@
       {
         "key": "username",
         "type": "string",
-        "label": "Duolingo Username (leave empty to auto-detect)",
+        "label": "Duolingo Username (recommended; leave empty only if you enable the storage scan below)",
         "defaultValue": ""
       },
       {
         "key": "autoDetect",
         "type": "boolean",
-        "label": "Auto-detect username from local Duolingo Desktop or browser storage when none is set",
-        "defaultValue": true
+        "label": "Scan local browser/Duolingo-app storage to find your username (OFF by default). Scans only Local Storage LevelDB folders of Duolingo Desktop, Brave, Chrome and Chromium; reads only the user.username field. See README Privacy section.",
+        "defaultValue": false
       },
       {
         "key": "refreshMinutes",
