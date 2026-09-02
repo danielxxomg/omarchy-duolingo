@@ -9,6 +9,12 @@
 
 > Track your Duolingo streak in real-time on your status bar, monitor multilingual course progress, and get evening reminder notifications when your daily habit is at risk.
 
+## Screenshots
+
+| Overlay command palette | Popup panel | Settings |
+| :---: | :---: | :---: |
+| ![Overlay command palette](preview.png) | ![Popup panel](assets/screenshot.png) | ![Settings](assets/screenshot-settings.png) |
+
 ---
 
 ## Quick Start
