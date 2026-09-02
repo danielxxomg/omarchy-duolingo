@@ -96,3 +96,34 @@ class TestQmlContract(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestStreakData(unittest.TestCase):
+    """The helper must project streakData.currentStreak.startDate (privacy-safe:
+    a public start date, not personal data)."""
+
+    def setUp(self):
+        raw = json.loads(UPSTREAM.decode())
+        raw["users"][0]["streakData"] = {
+            "currentStreak": {"length": 12, "startDate": "2026-08-22", "endDate": "2026-09-02"}
+        }
+        self.doc = fetch_mod.normalize(json.dumps(raw).encode())
+
+    def test_streak_start_date_projected(self):
+        self.assertEqual(self.doc["streakStart"], "2026-08-22")
+
+    def test_missing_streak_data_defaults_empty(self):
+        doc = fetch_mod.normalize(UPSTREAM)
+        self.assertEqual(doc["streakStart"], "")
+
+    def test_invalid_start_date_rejected(self):
+        raw = json.loads(UPSTREAM.decode())
+        raw["users"][0]["streakData"] = {"currentStreak": {"startDate": "not-a-date"}}
+        doc = fetch_mod.normalize(json.dumps(raw).encode())
+        self.assertEqual(doc["streakStart"], "")
+
+    def test_start_date_not_a_string_rejected(self):
+        raw = json.loads(UPSTREAM.decode())
+        raw["users"][0]["streakData"] = {"currentStreak": {"startDate": 12345}}
+        doc = fetch_mod.normalize(json.dumps(raw).encode())
+        self.assertEqual(doc["streakStart"], "")

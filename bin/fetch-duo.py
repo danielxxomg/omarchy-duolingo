@@ -170,6 +170,15 @@ def normalize(body):
     if not isinstance(total_xp, int) or isinstance(total_xp, bool) or not 0 <= total_xp <= 100_000_000:
         return None
     extended = user.get("streak_extended_today") is True
+    # Public streak metadata: start date of the current streak (ISO date only).
+    streak_start = ""
+    streak_data = user.get("streakData")
+    if isinstance(streak_data, dict):
+        current = streak_data.get("currentStreak")
+        if isinstance(current, dict):
+            raw_start = current.get("startDate")
+            if isinstance(raw_start, str) and re.match(r"^\d{4}-\d{2}-\d{2}$", raw_start):
+                streak_start = raw_start
     raw_courses = user.get("courses", [])
     if not isinstance(raw_courses, list) or len(raw_courses) > MAX_COURSES:
         return None
@@ -201,6 +210,7 @@ def normalize(body):
         "avatar": avatar,
         "streak": streak,
         "streakExtendedToday": extended,
+        "streakStart": streak_start,
         "totalXp": total_xp,
         "courses": courses,
         "topCourse": courses[0] if courses else None,

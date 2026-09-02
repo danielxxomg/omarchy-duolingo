@@ -76,6 +76,7 @@ function parseUserData(rawText) {
         fullname: parsed.fullname || parsed.username || "Duolingo Learner",
         streak: parseInt(parsed.streak, 10) || 0,
         streakExtendedToday: parsed.streakExtendedToday === true,
+        streakStart: typeof parsed.streakStart === "string" ? parsed.streakStart : "",
         totalXp: parseInt(parsed.totalXp, 10) || 0,
         avatar: parsed.avatar || "",
         courses: courses,
@@ -151,7 +152,8 @@ function barText(data, showXp) {
 function tooltipText(data) {
   if (!data || !data.valid) return "Duolingo: Set your username in settings."
   var status = data.streakExtendedToday ? "Streak completed for today" : "Daily lesson pending"
-  return "Duolingo (@" + data.username + ") · " + data.streak + " day streak · " + formatNumber(data.totalXp) + " XP · " + status
+  var since = data.streakStart ? " · since " + data.streakStart : ""
+  return "Duolingo (@" + data.username + ") · " + data.streak + " day streak" + since + " · " + formatNumber(data.totalXp) + " XP · " + status
 }
 
 function statusSummary(data) {

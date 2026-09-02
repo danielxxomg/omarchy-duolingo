@@ -144,7 +144,13 @@ Panel {
         // 1. Native Omarchy Hero
         PanelHero {
           title: root.effectiveData && root.effectiveData.valid ? root.effectiveData.fullname : "Duolingo Tracker"
-          meta: root.effectiveData && root.effectiveData.valid ? ("@" + root.effectiveData.username) : (root.hasConfiguredUsername ? "Fetching stats..." : "Set your username in Settings")
+          meta: {
+            if (!root.effectiveData || !root.effectiveData.valid)
+              return root.hasConfiguredUsername ? "Fetching stats..." : "Set your username in Settings"
+            var base = "@" + root.effectiveData.username
+            if (root.effectiveData.streakStart) base += " · streak since " + root.effectiveData.streakStart
+            return base
+          }
           foreground: root.foreground
           fontFamily: root.fontFamily
           iconComponent: Component {
