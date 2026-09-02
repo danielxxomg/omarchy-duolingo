@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.0] - 2026-09-02
+## [1.3.0] - 2026-09-01
 
 ### Added
 - **Overlay (`Overlay.qml` + `Commands.js`)**: Full-screen PanelWindow (`WlrLayershell` Overlay/Exclusive, `duolingo-overlay` namespace) with `open(payloadJson)`/`finishClose()->shell.hide("user.duolingo")` lifecycle, focused-screen resolution, dark scrim (0.78) with green gradient, and `Commands.js` verb grammar mirroring hydrate's contract (`score`/`verbScore`/`suggest`/`parse`/`execute`/`contextOf`/`helpRows`).
@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Hero visual**: Large streak number + `xpToday / goalXp` arc (270 degree `Shape` track + progress with glow + tick ring, ignition sweep on open), week strip reuse of `weekHistory`, subtle `duo.svg` feather at low opacity.
 - **Manifest**: Added `overlay` to `kinds` and `entryPoints {overlay:"Overlay.qml"}` (order `bar-widget`, `overlay`, `service` like hydrate). Version bump to 1.3.0.
 
-## [1.2.0] - 2026-09-02
+## [1.2.0] - 2026-09-01
 
 ### Added
 - **Local history**: Daily snapshots persisted to `~/.local/state/duolingo/history.json` with atomic mktemp+mv writes and rev guard; pruned to 366 days.

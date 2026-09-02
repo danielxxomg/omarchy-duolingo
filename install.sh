@@ -51,11 +51,22 @@ if [[ -n "$USERNAME" ]]; then
   fi
 fi
 
-# 4. Optional Hyprland Keybinding
+# 4. Optional Hyprland Keybinding (asks before touching your bindings file)
 BINDINGS_FILE="$HOME/.config/hypr/bindings.lua"
 if [[ -f "$BINDINGS_FILE" ]] && ! grep -q "user.duolingo" "$BINDINGS_FILE"; then
-  echo -e "\n\e[34mAdding SUPER + CTRL + D hotkey to $BINDINGS_FILE...\e[0m"
-  echo -e '\no.bind("SUPER + CTRL + D", "Duolingo Tracker", "omarchy-shell user.duolingo toggle")' >> "$BINDINGS_FILE"
+  ADD_BINDING=false
+  if command -v gum >/dev/null 2>&1; then
+    if gum confirm "Add SUPER + CTRL + D hotkey to $BINDINGS_FILE?"; then ADD_BINDING=true; fi
+  else
+    read -rp "Add SUPER + CTRL + D hotkey to $BINDINGS_FILE? [Y/n] " ans
+    case "${ans:-Y}" in [Yy]*) ADD_BINDING=true ;; *) ADD_BINDING=false ;; esac
+  fi
+  if [[ "$ADD_BINDING" == true ]]; then
+    echo -e "\n\e[34mAdding SUPER + CTRL + D hotkey to $BINDINGS_FILE...\e[0m"
+    echo -e '\no.bind("SUPER + CTRL + D", "Duolingo Tracker", "omarchy-shell user.duolingo toggle")' >> "$BINDINGS_FILE"
+  else
+    echo -e "\nSkipping keybinding — add it manually to $BINDINGS_FILE if you change your mind."
+  fi
 fi
 
 # Optional overlay keybinding (commented, not auto-added):

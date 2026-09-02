@@ -4,7 +4,7 @@
 [![Platform: Omarchy Linux](https://img.shields.io/badge/Platform-Omarchy%20Linux-orange.svg)](https://omarchy.org)
 [![Quickshell: QML](https://img.shields.io/badge/Engine-Quickshell%20%2F%20QML-blue.svg)](https://quickshell.outfoxxed.me)
 <p align="center">
-  <img src="preview.png" alt="Duolingo Omarchy Plugin Preview" width="480">
+  <img src="preview.png" alt="Duolingo Omarchy Plugin Preview" width="720">
 </p>
 
 > Track your Duolingo streak in real-time on your status bar, monitor multilingual course progress, and get evening reminder notifications when your daily habit is at risk.
@@ -184,3 +184,7 @@ omarchy plugin remove user.duolingo
 ## License
 
 MIT License © 2026 danielxxomg.
+
+## Trademarks
+
+Duolingo® and the Duolingo Owl are trademarks of Duolingo, Inc. This plugin is not affiliated with, endorsed by, or sponsored by Duolingo, Inc. The owl glyph (`assets/duo.svg`) comes from [Simple Icons](https://simpleicons.org) and is used for identification only.
