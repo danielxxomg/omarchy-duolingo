@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import "Model.js" as Model
+import "Commands.js" as Commands
 
 Item {
   id: root
@@ -71,6 +72,48 @@ Item {
   function launchDuolingo() {
     launchProc.command = [root.pluginDir + "/bin/launch-duo.sh"]
     launchProc.running = true
+  }
+
+  // ---------------------------------------------------------------- settings IPC
+
+  function setSettings(values) {
+    var entry = { id: "user.duolingo" }
+    for (var k in root.widgetSettings) if (k !== "id") entry[k] = root.widgetSettings[k]
+    for (var key in values) {
+      if (values[key] === undefined) delete entry[key]
+      else entry[key] = values[key]
+    }
+    if (entry.username !== undefined) entry.username = String(entry.username).trim()
+    root.widgetSettings = entry
+    if (root.shell && typeof root.shell.updateEntryInline === "function")
+      root.shell.updateEntryInline("user.duolingo", entry)
+    if (values.username !== undefined) root.refresh()
+  }
+
+  function setSetting(key, value) { var v = {}; v[key] = value; setSettings(v) }
+
+  function setUsername(name) {
+    var w = String(name || "").trim()
+    if (!/^[A-Za-z0-9_.-]{2,25}$/.test(w)) return
+    setSetting("username", w)
+  }
+
+  function persistUsername(name) { setUsername(name) }
+
+  function setGoal(n) {
+    var v = Util.clamp(Math.round(Number(n)) || 50, 10, 1000)
+    setSetting("goalXp", v)
+  }
+
+  function runCommand(text) {
+    var parsed = Commands.parse(text, Commands.contextOf(root))
+    if (!parsed.ok) return parsed.error || "Nothing to do"
+    if (parsed.ui) return parsed.preview
+    return Commands.execute(root, parsed)
+  }
+
+  function openOverlay() {
+    if (root.shell && typeof root.shell.toggle === "function") root.shell.toggle("user.duolingo", "{}")
   }
 
   function checkReminder() {
@@ -268,6 +311,15 @@ Item {
 
     function streak(): string {
       return root.userData && root.userData.valid ? String(root.userData.streak) : "0"
+    }
+
+    function overlay(): string {
+      root.openOverlay()
+      return "Opening overlay…"
+    }
+
+    function run(line: string): string {
+      return root.runCommand(line)
     }
   }
 }

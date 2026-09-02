@@ -87,6 +87,7 @@ BarWidget {
         base += " · " + root.xpToday + " / " + root.goalXp + " XP today"
         if (root.service.goalMet) base += " — goal met"
       }
+      base += " · Right click launches Duolingo, overlay via omarchy-shell user.duolingo overlay"
       return base
     }
 
