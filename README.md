@@ -1,4 +1,4 @@
-# Duolingo Plugin for Omarchy 🦉🔥
+# Duolingo Plugin for Omarchy
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform: Omarchy Linux](https://img.shields.io/badge/Platform-Omarchy%20Linux-orange.svg)](https://omarchy.org)
@@ -11,7 +11,7 @@
 
 ---
 
-## ⚡ Quick Start
+## Quick Start
 
 ### 1. Install Plugin
 ```bash
@@ -30,19 +30,19 @@ omarchy-shell user.duolingo status
 
 ---
 
-## 🎯 What It Does
+## What It Does
 
 | Component | Behavior |
 | :--- | :--- |
-| **Bar Pill (`BarWidget.qml`)** | Shows flame and streak (`🔥 45`). Colors **Accent Green** when done today, **Urgent Amber** when pending. |
-| **Popup Panel (`Panel.qml`)** | Full course breakdown with flags (🇬🇧, 🇯🇵, 🇮🇹, 🇧🇷), XP bars, and one-click practice launch. |
+| **Bar Pill (`BarWidget.qml`)** | Shows the streak number (e.g. `45`). Accent green when today is done, amber when pending. |
+| **Popup Panel (`Panel.qml`)** | Full course breakdown with language flags, XP bars, and one-click practice launch. |
 | **Background Daemon (`Service.qml`)** | Fires desktop notification at 20:00 if your lesson is still pending. |
 | **Zero-Config (`bin/detect-user.py`)** | Reads your local Duolingo desktop or browser session to resolve your username with 0 manual steps. |
 | **Universal Launcher (`bin/launch-duo.sh`)** | Launches native AUR binary, Flatpak DL-Desktop, Omarchy WebApp, or default browser fallback. |
 
 ---
 
-## ⌨️ Controls & Shortcuts
+## Controls & Shortcuts
 
 | Context | Action | Key / Gesture |
 | :--- | :--- | :--- |
@@ -57,7 +57,7 @@ omarchy-shell user.duolingo status
 
 ---
 
-## 🌐 Supported Linux Duolingo Ecosystem
+## Supported Linux Duolingo Ecosystem
 
 This plugin is designed as the status bar companion for all Duolingo tools available on Linux:
 
@@ -69,7 +69,7 @@ This plugin is designed as the status bar companion for all Duolingo tools avail
 
 ---
 
-## ⚙️ Configuration (`~/.config/omarchy/shell.json`)
+## Configuration (`~/.config/omarchy/shell.json`)
 
 Configure directly via the popup settings drawer (`s`) or in `~/.config/omarchy/shell.json`:
 
@@ -102,7 +102,7 @@ Configure directly via the popup settings drawer (`s`) or in `~/.config/omarchy/
 
 ---
 
-## 🧪 IPC Reference
+## IPC Reference
 
 Integrate with custom scripts, Waybar, or polybar:
 
@@ -115,7 +115,7 @@ omarchy-shell user.duolingo status   # Output single-line text summary
 
 ---
 
-## 🗑️ Removal
+## Removal
 
 ```bash
 omarchy plugin remove user.duolingo
@@ -123,6 +123,6 @@ omarchy plugin remove user.duolingo
 
 ---
 
-## 📄 License
+## License
 
 MIT License © 2026 danielxxomg.
