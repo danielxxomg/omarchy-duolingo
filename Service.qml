@@ -22,6 +22,9 @@ Item {
   readonly property bool remindersEnabled: widgetSetting("remindersEnabled", true) !== false
   readonly property int remindHour: Util.clamp(parseInt(widgetSetting("remindHour", 20), 10) || 20, 0, 23)
 
+  readonly property string pluginDir: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "").replace(/\/$/, ""))
+  readonly property string iconPath: pluginDir + "/assets/duo.png"
+
   property var userData: null
   property bool notifiedToday: false
   property string lastNotifiedDate: ""
@@ -30,16 +33,16 @@ Item {
     if (fetchProc.running) return
     var user = (root.configuredUsername || "").trim()
     if (user !== "") {
-      fetchProc.command = [Quickshell.env("HOME") + "/.config/omarchy/plugins/user.duolingo/bin/fetch-duo.py", user]
+      fetchProc.command = [root.pluginDir + "/bin/fetch-duo.py", user]
     } else {
-      fetchProc.command = [Quickshell.env("HOME") + "/.config/omarchy/plugins/user.duolingo/bin/fetch-duo.py"]
+      fetchProc.command = [root.pluginDir + "/bin/fetch-duo.py"]
     }
     fetchProc.running = true
   }
 
   function launchDuolingo() {
-    notifyProc.command = ["bash", "-c", "~/.config/omarchy/plugins/user.duolingo/bin/launch-duo.sh"]
-    notifyProc.running = true
+    launchProc.command = [root.pluginDir + "/bin/launch-duo.sh"]
+    launchProc.running = true
   }
 
   function checkReminder() {
@@ -105,6 +108,10 @@ Item {
 
   Process {
     id: notifyProc
+  }
+
+  Process {
+    id: launchProc
   }
 
   IpcHandler {

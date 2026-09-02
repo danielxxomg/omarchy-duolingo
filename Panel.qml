@@ -22,6 +22,7 @@ Panel {
   readonly property color accentColor: Color.accent || "#58cc02"
   readonly property color dim: Qt.darker(foreground, 1.45)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
+  readonly property string pluginDir: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "").replace(/\/$/, ""))
 
   property int selectedCourseIndex: 0
   property bool settingsOpen: false
@@ -41,7 +42,7 @@ Panel {
 
   function launchDuolingo() {
     if (root.bar) {
-      root.bar.run(Quickshell.env("HOME") + "/.config/omarchy/plugins/user.duolingo/bin/launch-duo.sh")
+      root.bar.run(root.pluginDir + "/bin/launch-duo.sh")
     }
     root.close()
   }

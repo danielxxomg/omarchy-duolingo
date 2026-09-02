@@ -9,6 +9,7 @@ BarWidget {
   id: root
   moduleName: "user.duolingo"
 
+  readonly property string pluginDir: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "").replace(/\/$/, ""))
   readonly property string configuredUsername: setting("username", "")
   readonly property int refreshMinutes: Math.max(5, parseInt(setting("refreshMinutes", 15), 10) || 15)
   readonly property bool showXp: setting("showXp", false) === true
@@ -35,9 +36,9 @@ BarWidget {
     root.fetching = true
     var user = (root.configuredUsername || "").trim()
     if (user !== "") {
-      fetchProc.command = [Quickshell.env("HOME") + "/.config/omarchy/plugins/user.duolingo/bin/fetch-duo.py", user]
+      fetchProc.command = [root.pluginDir + "/bin/fetch-duo.py", user]
     } else {
-      fetchProc.command = [Quickshell.env("HOME") + "/.config/omarchy/plugins/user.duolingo/bin/fetch-duo.py"]
+      fetchProc.command = [root.pluginDir + "/bin/fetch-duo.py"]
     }
     fetchProc.running = true
   }
@@ -127,7 +128,7 @@ BarWidget {
     onPressed: function(mouseButton) {
       if (mouseButton === Qt.RightButton) {
         if (root.bar) {
-          root.bar.run(Quickshell.env("HOME") + "/.config/omarchy/plugins/user.duolingo/bin/launch-duo.sh")
+          root.bar.run(root.pluginDir + "/bin/launch-duo.sh")
         }
       } else if (mouseButton === Qt.MiddleButton) {
         root.refresh()
