@@ -34,9 +34,9 @@ omarchy-shell user.duolingo status
 
 | Component | Behavior |
 | :--- | :--- |
-| **Bar Pill (`BarWidget.qml`)** | Shows the streak number (e.g. `45`). Accent green when today is done, amber when pending. |
-| **Popup Panel (`Panel.qml`)** | Full course breakdown with language flags, XP bars, and one-click practice launch. |
-| **Background Daemon (`Service.qml`)** | Fires desktop notification at 20:00 if your lesson is still pending. |
+| **Bar Pill (`BarWidget.qml`)** | Shows the streak number (e.g. `45`). Accent green when today is done, amber when pending. Tooltip includes daily goal progress. |
+| **Popup Panel (`Panel.qml`)** | Today goal bar (XP today vs goal), 7-day week strip, full course breakdown with language flags and XP bars, and one-click practice launch. Settings face covers all options; `?` reveals keyboard shortcuts. |
+| **Background Daemon (`Service.qml`)** | Persists daily snapshots to `~/.local/state/duolingo/history.json`, fires desktop notification at the configured hour if your lesson is still pending. |
 | **Zero-Config (`bin/detect-user.py`)** | Reads your local Duolingo desktop or browser session to resolve your username with 0 manual steps. |
 | **Universal Launcher (`bin/launch-duo.sh`)** | Launches native AUR binary, Flatpak DL-Desktop, Omarchy WebApp, or default browser fallback. |
 
@@ -53,6 +53,7 @@ omarchy-shell user.duolingo status
 | **Popup Panel** | Start practicing active course | `Enter` |
 | **Popup Panel** | Refresh stats from API | `r` |
 | **Popup Panel** | Open settings drawer | `s` |
+| **Popup Panel** | Toggle shortcuts help | `?` |
 | **Popup Panel** | Close popup | `Esc` or `q` |
 
 ---
@@ -84,7 +85,9 @@ Configure directly via the popup settings drawer (`s`) or in `~/.config/omarchy/
           "refreshMinutes": 15,
           "showXp": false,
           "remindersEnabled": true,
-          "remindHour": 20
+          "remindHour": 20,
+          "goalXp": 50,
+          "reducedMotion": false
         }
       ]
     }
@@ -99,6 +102,8 @@ Configure directly via the popup settings drawer (`s`) or in `~/.config/omarchy/
 | `showXp` | boolean | `false` | When true, renders Total XP on the bar instead of the streak count. |
 | `remindersEnabled` | boolean | `true` | Enables evening reminder notifications when streak is unfulfilled. |
 | `remindHour` | integer | `20` | Hour of day (0-23) to trigger the streak reminder. |
+| `goalXp` | integer | `50` | Daily XP goal. Progress shown in panel and bar tooltip (`23 / 50 XP today`). |
+| `reducedMotion` | boolean | `false` | When true, disables panel animations for reduced motion. |
 
 ---
 

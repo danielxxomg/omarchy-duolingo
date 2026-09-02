@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "user.duolingo",
   "name": "Duolingo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "danielxxomg",
   "license": "MIT",
   "description": "Duolingo companion for Omarchy. Real-time daily streak monitor, multilingual progress breakdown, and smart evening streak reminders.",
@@ -36,7 +36,9 @@
       "refreshMinutes": 15,
       "showXp": false,
       "remindersEnabled": true,
-      "remindHour": 20
+      "remindHour": 20,
+      "goalXp": 50,
+      "reducedMotion": false
     },
     "schema": [
       {
@@ -74,6 +76,21 @@
         "max": 23,
         "step": 1,
         "defaultValue": 20
+      },
+      {
+        "key": "goalXp",
+        "type": "integer",
+        "label": "Daily XP goal (XP needed to complete today)",
+        "min": 10,
+        "max": 1000,
+        "step": 10,
+        "defaultValue": 50
+      },
+      {
+        "key": "reducedMotion",
+        "type": "boolean",
+        "label": "Reduce motion (disable panel animations)",
+        "defaultValue": false
       }
     ]
   }

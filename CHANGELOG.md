@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-09-02
+
+### Added
+- **Local history**: Daily snapshots persisted to `~/.local/state/duolingo/history.json` with atomic mktemp+mv writes and rev guard; pruned to 366 days.
+- **Daily XP goal**: `goalXp` setting (10-1000, default 50) with panel progress bar (green when met, amber otherwise) and bar tooltip `23 / 50 XP today`.
+- **Week view**: 7-day compact strip (letter + vertical bar) derived from snapshots; placeholder on first day.
+- **Settings face**: All schema keys reachable — username, goalXp presets (20/50/100/200) + stepper, refresh interval, showXp, reminders, remind hour, reducedMotion.
+- **Empty states**: Username prompt with settings CTA, first-day placeholder, and preserved error banner.
+- **Keyboard help**: `?` toggles aligned KeysCard (j/k, Enter, r, s, ?, Esc); footer hint retained.
+- **Reduced motion**: `reducedMotion` setting disables panel animations via Behavior guards.
+
 ## [1.1.0] - 2026-09-01
 
 ### Fixed
