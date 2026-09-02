@@ -17,6 +17,7 @@ Panel {
   readonly property var barIdentity: hostWidget || root
   property var userData: null
   property var service: null
+  property var settings: ({})
   readonly property var effectiveData: service && service.userData ? service.userData : userData
   readonly property string effectiveError: service ? service.lastError : ""
   readonly property bool effectiveStale: service ? service.isStale === true : false
@@ -45,6 +46,10 @@ Panel {
     var ss = settings.username !== undefined ? String(settings.username).trim() : ""
     return ss !== ""
   }
+  readonly property int effectiveRefresh: service ? service.refreshMinutes : (settings.refreshMinutes !== undefined ? Math.max(5, parseInt(settings.refreshMinutes, 10) || 15) : 15)
+  readonly property bool effectiveShowXp: service ? service.showXp : (settings.showXp === true)
+  readonly property bool effectiveReminders: service ? service.remindersEnabled : (settings.remindersEnabled !== false)
+  readonly property int effectiveRemindHour: service ? service.remindHour : Util.clamp(parseInt(settings.remindHour !== undefined ? settings.remindHour : 20, 10) || 20, 0, 23)
 
   function open() {
     root.controller.show()
@@ -73,14 +78,30 @@ Panel {
     else if (root.hostWidget && root.hostWidget.refresh) root.hostWidget.refresh()
   }
 
-  function saveSettings(newUsername) {
+  function persistSettings(values) {
     if (!root.bar || !root.bar.shell || typeof root.bar.shell.updateEntryInline !== "function") return
     var entry = { id: root.moduleName }
-    for (var key in settings) if (key !== "id") entry[key] = settings[key]
-    entry.username = newUsername.trim()
+    for (var k in settings) if (k !== "id") entry[k] = settings[k]
+    for (var key in values) {
+      if (values[key] === undefined) delete entry[key]
+      else entry[key] = values[key]
+    }
+    if (entry.username !== undefined) entry.username = String(entry.username).trim()
+    // immediate local reflection so UI snaps before shell hot-reload
+    root.settings = entry
+    if (root.service && "widgetSettings" in root.service) root.service.widgetSettings = entry
     root.bar.shell.updateEntryInline(root.moduleName, entry)
-    root.refresh()
+    // keep data fresh if username changed
+    if (values.username !== undefined) root.refresh()
   }
+
+  function saveSettings(newUsername) {
+    root.persistSettings({ username: newUsername.trim() })
+  }
+
+  function clampGoal(v) { return Math.max(10, Math.min(1000, Math.round(Number(v)) || 50)) }
+  function clampRefresh(v) { return Math.max(5, Math.min(120, Math.round(Number(v)) || 15)) }
+  function clampHour(v) { return Math.max(0, Math.min(23, Math.round(Number(v)) || 20)) }
 
   // IPC handled by Service.qml (target "user.duolingo"). Panel toggle via
   // shell id-based handling; Service owns status/refresh/launch/streak.
@@ -642,33 +663,31 @@ Panel {
           }
         }
 
-        // 7. Settings Drawer
+        // 7. Settings face (all schema keys)
         Column {
           width: parent.width
-          spacing: Style.space(6)
+          spacing: Style.space(10)
           visible: root.settingsOpen
 
+          // Username
           Row {
             width: parent.width
             spacing: Style.space(6)
-
             TextField {
               id: usernameInput
               width: parent.width - Style.space(64)
               implicitHeight: Style.space(32)
-              placeholderText: "Override username"
+              placeholderText: "Duolingo username"
               text: settings.username || ""
               font.family: root.fontFamily
               font.pixelSize: Style.font.bodySmall
               onAccepted: root.saveSettings(usernameInput.text)
             }
-
             Rectangle {
               width: Style.space(58)
               implicitHeight: Style.space(32)
               radius: Math.min(Style.cornerRadius, 4)
               color: saveMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.2) : Qt.rgba(1, 1, 1, 0.1)
-
               Text {
                 anchors.centerIn: parent
                 text: "Save"
@@ -676,13 +695,266 @@ Panel {
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
               }
-
               MouseArea {
                 id: saveMouse
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.saveSettings(usernameInput.text)
+              }
+            }
+          }
+
+          // Daily goal (stepper + presets)
+          Rectangle {
+            width: parent.width
+            implicitHeight: goalCol.implicitHeight + Style.space(12)
+            radius: Math.min(Style.cornerRadius, 6)
+            color: Qt.rgba(1,1,1,0.04)
+            border.width: 1
+            border.color: Qt.rgba(1,1,1,0.07)
+            Column {
+              id: goalCol
+              x: Style.space(8)
+              y: Style.space(8)
+              width: parent.width - Style.space(16)
+              spacing: Style.space(8)
+              Item {
+                width: parent.width
+                height: Style.space(28)
+                Text {
+                  anchors.left: parent.left
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: "DAILY GOAL"
+                  color: root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                  font.letterSpacing: 1.2
+                }
+                Text {
+                  anchors.right: parent.right
+                  anchors.verticalCenter: parent.verticalCenter
+                  text: root.goalXp + " XP"
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                }
+              }
+              Row {
+                width: parent.width
+                spacing: Style.space(8)
+                Rectangle {
+                  width: Style.space(32); height: Style.space(32); radius: height/2
+                  color: goalMinus.containsMouse ? Qt.rgba(1,1,1,0.12) : Qt.rgba(1,1,1,0.06)
+                  border.width: 1; border.color: Qt.rgba(1,1,1,0.08)
+                  Text { anchors.centerIn: parent; text: "-"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.bodySmall; font.bold: true }
+                  MouseArea { id: goalMinus; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.persistSettings({ goalXp: clampGoal(root.goalXp - 10) }) }
+                }
+                Rectangle {
+                  width: parent.width - Style.space(32)*2 - Style.space(16)
+                  height: Style.space(32)
+                  radius: Math.min(Style.cornerRadius, 6)
+                  color: Qt.rgba(1,1,1,0.06)
+                  Text {
+                    anchors.centerIn: parent
+                    text: String(root.goalXp)
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.body
+                    font.bold: true
+                  }
+                }
+                Rectangle {
+                  width: Style.space(32); height: Style.space(32); radius: height/2
+                  color: goalPlus.containsMouse ? Qt.rgba(1,1,1,0.12) : Qt.rgba(1,1,1,0.06)
+                  border.width: 1; border.color: Qt.rgba(1,1,1,0.08)
+                  Text { anchors.centerIn: parent; text: "+"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.bodySmall; font.bold: true }
+                  MouseArea { id: goalPlus; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.persistSettings({ goalXp: clampGoal(root.goalXp + 10) }) }
+                }
+              }
+              Row {
+                width: parent.width
+                spacing: Style.space(6)
+                Repeater {
+                  model: [20, 50, 100, 200]
+                  delegate: Rectangle {
+                    required property var modelData
+                    width: (parent.width - 3*Style.space(6))/4
+                    height: Style.space(26)
+                    radius: Math.min(Style.cornerRadius, 4)
+                    color: modelData === root.goalXp ? Qt.rgba(0.34,0.8,0.01,0.22) : (chipM.containsMouse ? Qt.rgba(1,1,1,0.10) : Qt.rgba(1,1,1,0.05))
+                    border.width: 1; border.color: modelData === root.goalXp ? Qt.rgba(0.34,0.8,0.01,0.5) : Qt.rgba(1,1,1,0.07)
+                    Text { anchors.centerIn: parent; text: String(modelData); color: modelData === root.goalXp ? root.accentColor : root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: modelData === root.goalXp }
+                    MouseArea { id: chipM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.persistSettings({ goalXp: modelData }) }
+                  }
+                }
+              }
+            }
+          }
+
+          // Refresh interval
+          Row {
+            width: parent.width
+            spacing: Style.space(8)
+            Text {
+              anchors.verticalCenter: parent.verticalCenter
+              width: parent.width - Style.space(80)
+              text: "Refresh interval (min)"
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              elide: Text.ElideRight
+            }
+            Rectangle {
+              width: Style.space(28); height: Style.space(28); radius: 14
+              color: refMinus.containsMouse ? Qt.rgba(1,1,1,0.12) : Qt.rgba(1,1,1,0.06)
+              border.width: 1; border.color: Qt.rgba(1,1,1,0.08)
+              Text { anchors.centerIn: parent; text: "-"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+              MouseArea { id: refMinus; anchors.fill: parent; hoverEnabled: true; onClicked: root.persistSettings({ refreshMinutes: clampRefresh(root.effectiveRefresh - 5) }) }
+            }
+            Text {
+              anchors.verticalCenter: parent.verticalCenter
+              width: Style.space(22)
+              horizontalAlignment: Text.AlignHCenter
+              text: String(root.effectiveRefresh)
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+            }
+            Rectangle {
+              width: Style.space(28); height: Style.space(28); radius: 14
+              color: refPlus.containsMouse ? Qt.rgba(1,1,1,0.12) : Qt.rgba(1,1,1,0.06)
+              border.width: 1; border.color: Qt.rgba(1,1,1,0.08)
+              Text { anchors.centerIn: parent; text: "+"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+              MouseArea { id: refPlus; anchors.fill: parent; hoverEnabled: true; onClicked: root.persistSettings({ refreshMinutes: clampRefresh(root.effectiveRefresh + 5) }) }
+            }
+          }
+
+          // Remind hour
+          Row {
+            width: parent.width
+            spacing: Style.space(8)
+            Text {
+              anchors.verticalCenter: parent.verticalCenter
+              width: parent.width - Style.space(80)
+              text: "Reminder hour (0-23)"
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              elide: Text.ElideRight
+            }
+            Rectangle {
+              width: Style.space(28); height: Style.space(28); radius: 14
+              color: hourMinus.containsMouse ? Qt.rgba(1,1,1,0.12) : Qt.rgba(1,1,1,0.06)
+              border.width: 1; border.color: Qt.rgba(1,1,1,0.08)
+              Text { anchors.centerIn: parent; text: "-"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+              MouseArea { id: hourMinus; anchors.fill: parent; hoverEnabled: true; onClicked: root.persistSettings({ remindHour: clampHour(root.effectiveRemindHour - 1) }) }
+            }
+            Text {
+              anchors.verticalCenter: parent.verticalCenter
+              width: Style.space(22)
+              horizontalAlignment: Text.AlignHCenter
+              text: String(root.effectiveRemindHour)
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+            }
+            Rectangle {
+              width: Style.space(28); height: Style.space(28); radius: 14
+              color: hourPlus.containsMouse ? Qt.rgba(1,1,1,0.12) : Qt.rgba(1,1,1,0.06)
+              border.width: 1; border.color: Qt.rgba(1,1,1,0.08)
+              Text { anchors.centerIn: parent; text: "+"; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true }
+              MouseArea { id: hourPlus; anchors.fill: parent; hoverEnabled: true; onClicked: root.persistSettings({ remindHour: clampHour(root.effectiveRemindHour + 1) }) }
+            }
+          }
+
+          // Toggles
+          Column {
+            width: parent.width
+            spacing: Style.space(8)
+
+            // Show XP toggle
+            Row {
+              width: parent.width
+              spacing: Style.space(8)
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - Style.space(50)
+                text: "Show XP on bar"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+              Rectangle {
+                width: Style.space(36); height: Style.space(20); radius: 10
+                color: root.effectiveShowXp ? root.accentColor : Qt.rgba(1,1,1,0.15)
+                Behavior on color { enabled: !root.reducedMotion; ColorAnimation { duration: 160 } }
+                Rectangle {
+                  width: Style.space(16); height: Style.space(16); radius: 8
+                  anchors.verticalCenter: parent.verticalCenter
+                  x: root.effectiveShowXp ? parent.width - width - 2 : 2
+                  color: "#ffffff"
+                  Behavior on x { enabled: !root.reducedMotion; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.persistSettings({ showXp: !root.effectiveShowXp }) }
+              }
+            }
+
+            // Reminders toggle
+            Row {
+              width: parent.width
+              spacing: Style.space(8)
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - Style.space(50)
+                text: "Evening reminders"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+              Rectangle {
+                width: Style.space(36); height: Style.space(20); radius: 10
+                color: root.effectiveReminders ? root.accentColor : Qt.rgba(1,1,1,0.15)
+                Behavior on color { enabled: !root.reducedMotion; ColorAnimation { duration: 160 } }
+                Rectangle {
+                  width: Style.space(16); height: Style.space(16); radius: 8
+                  anchors.verticalCenter: parent.verticalCenter
+                  x: root.effectiveReminders ? parent.width - width - 2 : 2
+                  color: "#ffffff"
+                  Behavior on x { enabled: !root.reducedMotion; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.persistSettings({ remindersEnabled: !root.effectiveReminders }) }
+              }
+            }
+
+            // Reduced motion toggle
+            Row {
+              width: parent.width
+              spacing: Style.space(8)
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - Style.space(50)
+                text: "Reduced motion"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+              Rectangle {
+                width: Style.space(36); height: Style.space(20); radius: 10
+                color: root.reducedMotion ? root.accentColor : Qt.rgba(1,1,1,0.15)
+                Behavior on color { enabled: !root.reducedMotion; ColorAnimation { duration: 160 } }
+                Rectangle {
+                  width: Style.space(16); height: Style.space(16); radius: 8
+                  anchors.verticalCenter: parent.verticalCenter
+                  x: root.reducedMotion ? parent.width - width - 2 : 2
+                  color: "#ffffff"
+                  Behavior on x { enabled: !root.reducedMotion; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.persistSettings({ reducedMotion: !root.reducedMotion }) }
               }
             }
           }
