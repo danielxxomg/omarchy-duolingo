@@ -11,6 +11,7 @@ BarWidget {
   readonly property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
   readonly property string pluginDir: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "").replace(/\/$/, ""))
   readonly property bool showXp: setting("showXp", false) === true
+  readonly property bool reducedMotion: setting("reducedMotion", false) === true
 
   readonly property color accentColor: Color.accent || "#58cc02"
   readonly property color urgent: bar ? bar.urgent : Color.urgent
@@ -114,62 +115,17 @@ BarWidget {
       anchors.centerIn: parent
       spacing: Style.space(6)
 
-      // Duo icon wrapped in a daily-goal progress ring.
+      // Duo icon (pulses while fetching).
       Item {
-        id: ringItem
         width: Style.space(16)
         height: Style.space(16)
         implicitWidth: Style.space(16)
         implicitHeight: Style.space(16)
         anchors.verticalCenter: parent.verticalCenter
 
-        readonly property real frac: {
-          if (!root.userData || !root.userData.valid || root.goalXp <= 0) return 0
-          return Math.max(0, Math.min(1, root.xpToday / root.goalXp))
-        }
-        readonly property bool hasData: root.userData && root.userData.valid
-        readonly property color ringColor: hasData ? root.accentColor : "transparent"
-
-        Shape {
-          anchors.fill: parent
-          preferredRendererType: Shape.CurveRenderer
-          visible: ringItem.hasData
-          layer.enabled: true
-          layer.samples: 4
-
-          // Track
-          ShapePath {
-            strokeWidth: 1.5
-            strokeColor: root.userData && root.userData.streakExtendedToday
-                         ? Qt.rgba(root.ringItem.ringColor.r, root.ringItem.ringColor.g, root.ringItem.ringColor.b, 0.25)
-                         : Qt.rgba(0.5, 0.5, 0.5, 0.35)
-            fillColor: "transparent"
-            capStyle: ShapePath.RoundCap
-            PathAngleArc {
-              centerX: ringItem.width / 2; centerY: ringItem.height / 2
-              radiusX: ringItem.width / 2 - 1; radiusY: ringItem.height / 2 - 1
-              startAngle: -90; sweepAngle: 360
-            }
-          }
-
-          // Progress arc: fills clockwise from 12 o'clock as XP accumulates
-          ShapePath {
-            strokeWidth: 1.5
-            strokeColor: ringItem.ringColor
-            fillColor: "transparent"
-            capStyle: ShapePath.RoundCap
-            PathAngleArc {
-              centerX: ringItem.width / 2; centerY: ringItem.height / 2
-              radiusX: ringItem.width / 2 - 1; radiusY: ringItem.height / 2 - 1
-              startAngle: -90; sweepAngle: 360 * ringItem.frac
-            }
-          }
-        }
-
         Image {
           source: Qt.resolvedUrl("assets/duo.png")
           anchors.fill: parent
-          anchors.margins: 2
           fillMode: Image.PreserveAspectFit
           smooth: true
           opacity: root.fetching ? 0.45 : 1.0
@@ -177,22 +133,85 @@ BarWidget {
         }
       }
 
-      Text {
-        id: streakLabel
-        text: {
-          if (!root.userData || !root.userData.valid) return "Duo"
-          if (root.showXp) return Model.formatNumber(root.userData.totalXp) + " XP"
-          return String(root.userData.streak)
-        }
-        color: {
-          if (!root.userData || !root.userData.valid) return root.bar ? root.bar.foreground : Color.foreground
-          if (root.userData.streakExtendedToday) return root.accentColor
-          return root.urgent
-        }
-        font.family: root.bar ? root.bar.fontFamily : Style.font.family
-        font.pixelSize: Style.font.body
-        font.bold: true
+      // Streak number on a state pill: the pill's color carries the daily
+      // goal state at a glance (gray no-data, green fills with progress,
+      // solid green when met, pulsing red when the day is almost over and
+      // the streak is still pending).
+      //
+      // Pill states:
+      //   noData      gray  (0.10) — no data or not configured
+      //   atRisk      urgent red, pulsing — goal unmet and < 3h to midnight
+      //   goalMet     green solid (1.0) with soft glow
+      //   inProgress  green tinted by progress fraction (0.14..0.55)
+      readonly property bool hasData: root.userData && root.userData.valid
+      readonly property bool streakDone: hasData && root.userData.streakExtendedToday === true
+      readonly property int hoursToMidnight: (24 - new Date().getHours()) % 24
+      readonly property bool atRisk: hasData && !streakDone && root.hoursToMidnight < 3
+      readonly property real goalFrac: hasData && root.goalXp > 0
+                                       ? Math.max(0, Math.min(1, root.xpToday / root.goalXp)) : 0
+      // Urgency ramps up as midnight approaches during the final 6 hours.
+      readonly property real urgency: hasData && !streakDone
+                                      ? Math.max(0, Math.min(1, (6 - root.hoursToMidnight) / 6)) : 0
+
+      Rectangle {
+        id: pill
         anchors.verticalCenter: parent.verticalCenter
+        implicitWidth: streakLabel.implicitWidth + Style.space(12)
+        implicitHeight: streakLabel.implicitHeight + Style.space(5)
+        radius: height / 2
+
+        readonly property color pillGreen: root.accentColor
+        readonly property color pillUrgent: root.urgent
+
+        color: {
+          if (!barRow.hasData) return Qt.rgba(0.5, 0.5, 0.5, 0.10)
+          if (barRow.streakDone) return Qt.rgba(pillGreen.r, pillGreen.g, pillGreen.b, 0.9)
+          if (barRow.atRisk) return Qt.rgba(pillUrgent.r, pillUrgent.g, pillUrgent.b, 0.9)
+          // Blend from transparent toward green as XP accumulates.
+          var a = 0.14 + 0.41 * barRow.goalFrac
+          var c = Qt.rgba(pillGreen.r, pillGreen.g, pillGreen.b, a)
+          // Warn earlier than at-risk: tint red as the day runs out.
+          return barRow.urgency > 0 ? Qt.tint(c, Qt.rgba(pillUrgent.r, pillUrgent.g, pillUrgent.b, 0.45 * barRow.urgency)) : c
+        }
+
+        SequentialAnimation on opacity {
+          running: barRow.atRisk && !root.reducedMotion
+          loops: Animation.Infinite
+          NumberAnimation { from: 1.0; to: 0.55; duration: 900; easing.type: Easing.InOutSine }
+          NumberAnimation { from: 0.55; to: 1.0; duration: 900; easing.type: Easing.InOutSine }
+        }
+
+        Behavior on color {
+          enabled: !root.reducedMotion
+          ColorAnimation { duration: 320 }
+        }
+
+        Rectangle {
+          anchors.fill: parent
+          radius: parent.radius
+          visible: barRow.streakDone && !root.reducedMotion
+          color: "transparent"
+          border.width: 1
+          border.color: Qt.rgba(pill.pillGreen.r, pill.pillGreen.g, pill.pillGreen.b, 0.55)
+        }
+
+        Text {
+          id: streakLabel
+          anchors.centerIn: parent
+          text: {
+            if (!barRow.hasData) return "Duo"
+            if (root.showXp) return Model.formatNumber(root.userData.totalXp) + " XP"
+            return String(root.userData.streak)
+          }
+          color: {
+            if (!barRow.hasData) return root.bar ? root.bar.foreground : Color.foreground
+            if (barRow.streakDone || barRow.atRisk) return "#ffffff"
+            return root.bar ? root.bar.foreground : Color.foreground
+          }
+          font.family: root.bar ? root.bar.fontFamily : Style.font.family
+          font.pixelSize: Style.font.body
+          font.bold: true
+        }
       }
     }
   }
