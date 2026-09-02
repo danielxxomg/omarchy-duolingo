@@ -67,14 +67,8 @@ Panel {
     root.refresh()
   }
 
-  IpcHandler {
-    target: root.ipcTarget
-    function open(): void { root.open() }
-    function close(): void { root.close() }
-    function toggle(): void { root.toggle() }
-    function launch(): void { root.launchDuolingo() }
-    function refresh(): void { root.refresh() }
-  }
+  // IPC handled by Service.qml (target "user.duolingo"). Panel toggle via
+  // shell id-based handling; Service owns status/refresh/launch/streak.
 
   KeyboardPanel {
     id: panel

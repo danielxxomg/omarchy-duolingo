@@ -135,7 +135,7 @@ Item {
   }
 
   IpcHandler {
-    target: "duolingo"
+    target: "user.duolingo"
 
     function status(): string {
       return Model.statusSummary(root.userData)
