@@ -26,11 +26,15 @@ Item {
   readonly property string iconPath: pluginDir + "/assets/duo.png"
 
   property var userData: null
+  property string lastError: ""
+  property bool fetching: false
+  property bool isStale: false
   property bool notifiedToday: false
   property string lastNotifiedDate: ""
 
   function refresh() {
     if (fetchProc.running) return
+    root.fetching = true
     var user = (root.configuredUsername || "").trim()
     if (user !== "") {
       fetchProc.command = [root.pluginDir + "/bin/fetch-duo.py", user]
@@ -47,10 +51,9 @@ Item {
 
   function checkReminder() {
     if (!root.remindersEnabled || !root.userData || !root.userData.valid) return
-    
-    var now = new Date()
-    var todayStr = now.getFullYear() + "-" + (now.getMonth() + 1) + "-" + now.getDate()
-    
+
+    var todayStr = Model.dayKey(new Date())
+
     if (lastNotifiedDate !== todayStr) {
       notifiedToday = false
       lastNotifiedDate = todayStr
@@ -58,11 +61,13 @@ Item {
 
     if (notifiedToday) return
 
+    var now = new Date()
     if (now.getHours() >= root.remindHour && !root.userData.streakExtendedToday) {
       notifiedToday = true
-      var title = "Duolingo: Streak in danger! 🔥"
+      var title = "Duolingo streak reminder"
       var body = "You haven't completed your daily lesson today. Keep your " + root.userData.streak + "-day streak alive!"
-      notifyProc.command = ["notify-send", "-a", "Duolingo", "-i", "dialog-warning", title, body]
+      notifyProc.command = ["notify-send", "-a", "Duolingo", "-u", "normal", "-i", root.iconPath,
+        "-h", "string:x-canonical-private-synchronous:duolingo", title, body]
       notifyProc.running = true
     }
   }
@@ -95,12 +100,27 @@ Item {
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
+        root.fetching = false
         var raw = String(text || "").trim()
-        if (!raw) return
+        if (!raw) {
+          root.lastError = "Network error or user not found"
+          return
+        }
         var data = Model.parseUserData(raw)
         if (data.valid) {
           root.userData = data
+          root.lastError = ""
+          root.isStale = false
           root.checkReminder()
+        } else {
+          // Keep previous valid data as stale if present
+          if (root.userData && root.userData.valid) {
+            root.isStale = true
+          } else {
+            root.userData = data
+            root.isStale = false
+          }
+          root.lastError = data.error || "Failed to fetch Duolingo data"
         }
       }
     }

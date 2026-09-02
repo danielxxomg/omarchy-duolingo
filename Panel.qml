@@ -16,6 +16,10 @@ Panel {
   property var hostWidget: null
   readonly property var barIdentity: hostWidget || root
   property var userData: null
+  property var service: null
+  readonly property var effectiveData: service && service.userData ? service.userData : userData
+  readonly property string effectiveError: service ? service.lastError : ""
+  readonly property bool effectiveStale: service ? service.isStale === true : false
 
   readonly property color foreground: bar ? bar.foreground : Color.foreground
   readonly property color urgent: bar ? bar.urgent : Color.urgent
@@ -41,14 +45,17 @@ Panel {
   }
 
   function launchDuolingo() {
-    if (root.bar) {
+    if (root.service && typeof root.service.launchDuolingo === "function") {
+      root.service.launchDuolingo()
+    } else if (root.bar) {
       root.bar.run(root.pluginDir + "/bin/launch-duo.sh")
     }
     root.close()
   }
 
   function refresh() {
-    if (root.hostWidget && root.hostWidget.refresh) root.hostWidget.refresh()
+    if (root.service && typeof root.service.refresh === "function") root.service.refresh()
+    else if (root.hostWidget && root.hostWidget.refresh) root.hostWidget.refresh()
   }
 
   function saveSettings(newUsername) {

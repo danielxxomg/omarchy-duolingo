@@ -1,5 +1,12 @@
 .pragma library
 
+function pad2(n) { return (n < 10 ? "0" : "") + n }
+
+function dayKey(date) {
+  var d = date || new Date()
+  return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate())
+}
+
 var FLAG_MAP = {
   "en": "🇬🇧",
   "es": "🇪🇸",
