@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-09-02
+
+### Changed
+
+- **Consent-first onboarding**: the empty-username prompt now offers both paths ("Enter your Duolingo username in Settings, or enable local detection below"), and the auto-detect toggle discloses that it scans browser/Duolingo app local storage. Panel fallbacks for `autoDetect` now honor the new opt-in default instead of treating an unset value as enabled.
+- **Honest states**: hero subtitle shows "Fetching stats..." while a configured username loads and "Set your username in Settings" otherwise; bar tooltip no longer claims "Detecting user account..." when detection is off by default.
+
 ## [1.5.0] - 2026-09-02
 
 ### Security (marketplace review fixes)

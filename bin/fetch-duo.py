@@ -43,6 +43,17 @@ MAX_STR_LONG = 80
 
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{2,25}$")
 
+# Same emoji table as Model.js FLAG_MAP, kept in sync for helper-side flags.
+FLAG_MAP = {
+    "en": "🇬🇧", "es": "🇪🇸", "fr": "🇫🇷", "de": "🇩🇪", "it": "🇮🇹",
+    "pt": "🇧🇷", "ja": "🇯🇵", "zh": "🇨🇳", "ko": "🇰🇷", "ru": "🇷🇺",
+    "nl": "🇳🇱", "pl": "🇵🇱", "sv": "🇸🇪", "el": "🇬🇷", "tr": "🇹🇷",
+    "uk": "🇺🇦", "vi": "🇻🇳", "ar": "🇸🇦", "hi": "🇮🇳", "eo": "🟢",
+    "la": "🏛️", "he": "🇮🇱", "ga": "🇮🇪", "da": "🇩🇰", "no": "🇳🇴",
+    "fi": "🇫🇮", "cs": "🇨🇿", "ro": "🇷🇴", "hu": "🇭🇺", "id": "🇮🇩",
+    "th": "🇹🇭",
+}
+
 
 def fetch(username, deadline=None):
     """Return (stdout_text, exit_code). Normalized JSON only."""
@@ -116,6 +127,13 @@ def _clean_str(value, limit):
     return value if 0 < len(value) <= limit else ""
 
 
+def _truncated_str(value, limit):
+    """Trim to limit; over-long values are cut, not discarded."""
+    if not isinstance(value, str):
+        return ""
+    return value.strip()[:limit]
+
+
 def normalize(body):
     """Validate schema and project the upstream user into the plugin shape.
 
@@ -136,6 +154,15 @@ def normalize(body):
     username = _clean_str(user.get("username"), 25)
     if not username or not USERNAME_RE.match(username):
         return None
+    # QML consumer contract fields (Panel hero + course rows).
+    # Privacy: the upstream display name (often the legal name) is never
+    # projected or persisted; the public username doubles as the title.
+    fullname = username
+    avatar = _clean_str(user.get("picture"), MAX_STR)
+    if avatar.startswith("//"):
+        avatar = "https:" + avatar
+    if avatar and not avatar.startswith("https://"):
+        avatar = ""  # only https accepted
     streak = user.get("streak", 0)
     if not isinstance(streak, int) or isinstance(streak, bool) or not 0 <= streak <= 100000:
         return None
@@ -143,6 +170,15 @@ def normalize(body):
     if not isinstance(total_xp, int) or isinstance(total_xp, bool) or not 0 <= total_xp <= 100_000_000:
         return None
     extended = user.get("streak_extended_today") is True
+    # Public streak metadata: start date of the current streak (ISO date only).
+    streak_start = ""
+    streak_data = user.get("streakData")
+    if isinstance(streak_data, dict):
+        current = streak_data.get("currentStreak")
+        if isinstance(current, dict):
+            raw_start = current.get("startDate")
+            if isinstance(raw_start, str) and re.match(r"^\d{4}-\d{2}-\d{2}$", raw_start):
+                streak_start = raw_start
     raw_courses = user.get("courses", [])
     if not isinstance(raw_courses, list) or len(raw_courses) > MAX_COURSES:
         return None
@@ -163,11 +199,18 @@ def normalize(body):
         courses.append({"title": title or lang, "learningLanguage": lang,
                         "xp": xp, "crowns": crowns})
     courses.sort(key=lambda c: c["xp"], reverse=True)
+    max_course_xp = max((c["xp"] for c in courses), default=1) or 1
+    for c in courses:
+        c["flag"] = FLAG_MAP.get(c["learningLanguage"], "🌐")
+        c["fraction"] = c["xp"] / max_course_xp
     return {
         "valid": True,
         "username": username,
+        "fullname": fullname,
+        "avatar": avatar,
         "streak": streak,
         "streakExtendedToday": extended,
+        "streakStart": streak_start,
         "totalXp": total_xp,
         "courses": courses,
         "topCourse": courses[0] if courses else None,

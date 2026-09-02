@@ -50,7 +50,7 @@ Panel {
   readonly property bool effectiveShowXp: service ? service.showXp : (settings.showXp === true)
   readonly property bool effectiveReminders: service ? service.remindersEnabled : (settings.remindersEnabled !== false)
   readonly property int effectiveRemindHour: service ? service.remindHour : Util.clamp(parseInt(settings.remindHour !== undefined ? settings.remindHour : 20, 10) || 20, 0, 23)
-  readonly property bool effectiveAutoDetect: service ? service.autoDetect : (settings.autoDetect !== false)
+  readonly property bool effectiveAutoDetect: service ? service.autoDetect : (settings.autoDetect === true)
 
   function open() {
     root.controller.show()
@@ -144,7 +144,13 @@ Panel {
         // 1. Native Omarchy Hero
         PanelHero {
           title: root.effectiveData && root.effectiveData.valid ? root.effectiveData.fullname : "Duolingo Tracker"
-          meta: root.effectiveData && root.effectiveData.valid ? ("@" + root.effectiveData.username) : "Looking for session..."
+          meta: {
+            if (!root.effectiveData || !root.effectiveData.valid)
+              return root.hasConfiguredUsername ? "Fetching stats..." : "Set your username in Settings"
+            var base = "@" + root.effectiveData.username
+            if (root.effectiveData.streakStart) base += " · streak since " + root.effectiveData.streakStart
+            return base
+          }
           foreground: root.foreground
           fontFamily: root.fontFamily
           iconComponent: Component {
@@ -220,6 +226,59 @@ Panel {
             wrapMode: Text.WordWrap
             horizontalAlignment: Text.AlignHCenter
           }
+
+          // Actionable errors: give the failure a one-click next step.
+          Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: Style.space(8)
+            visible: {
+              var data = root.effectiveData
+              if (!data || !data.valid) return true
+              return root.effectiveStale
+            }
+
+            component ActionChip : Rectangle {
+              id: chip
+              property string label: ""
+              signal activated()
+              implicitWidth: chipLabel.implicitWidth + Style.space(14)
+              implicitHeight: Style.space(24)
+              radius: Math.min(Style.cornerRadius, 12)
+              color: chipMouse.containsMouse ? Qt.darker(root.accentColor, 1.1) : Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.16)
+              Text {
+                id: chipLabel
+                anchors.centerIn: parent
+                text: chip.label
+                color: root.accentColor
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+              }
+              MouseArea {
+                id: chipMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: chip.activated()
+              }
+            }
+
+            ActionChip {
+              label: root.effectiveError.indexOf("not found") >= 0 ? "Change Username" : "Retry"
+              onActivated: {
+                if (root.effectiveError.indexOf("not found") >= 0) root.settingsOpen = true
+                else if (root.service && typeof root.service.refresh === "function") root.service.refresh()
+              }
+            }
+
+            ActionChip {
+              visible: root.effectiveError.indexOf("not found") < 0
+              label: "Launch Duolingo"
+              onActivated: {
+                if (root.service && typeof root.service.launchDuolingo === "function") root.service.launchDuolingo()
+              }
+            }
+          }
         }
 
         // 3. Empty username prompt
@@ -236,7 +295,7 @@ Panel {
             spacing: Style.space(8)
             Text {
               width: parent.width
-              text: "Set your Duolingo username in Settings"
+              text: "Enter your Duolingo username in Settings, or enable local detection below"
               color: root.dim
               font.family: root.fontFamily
               font.pixelSize: Style.font.bodySmall
@@ -966,7 +1025,7 @@ Panel {
               Text {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - Style.space(50)
-                text: "Auto-detect username"
+                text: "Auto-detect username (scans browser/Duolingo app local storage)"
                 color: root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption

@@ -54,7 +54,42 @@ function parseUserData(rawText) {
 
   try {
     var parsed = JSON.parse(rawText)
+
+    // Normalized helper output (fetch-duo.py v1.5.0+): already validated and
+    // projected upstream-side; pass through with course-shape guarantees.
+    if (parsed && parsed.valid === true && Array.isArray(parsed.courses)) {
+      var courses = []
+      for (var k = 0; k < parsed.courses.length; k++) {
+        var c = parsed.courses[k]
+        courses.push({
+          title: c.title || "Language",
+          learningLanguage: c.learningLanguage || "",
+          flag: c.flag || getLanguageFlag(c.learningLanguage),
+          xp: parseInt(c.xp, 10) || 0,
+          crowns: parseInt(c.crowns, 10) || 0,
+          fraction: typeof c.fraction === "number" ? Math.max(0, Math.min(1, c.fraction)) : 0
+        })
+      }
+      return {
+        valid: true,
+        username: parsed.username || "",
+        fullname: parsed.fullname || parsed.username || "Duolingo Learner",
+        streak: parseInt(parsed.streak, 10) || 0,
+        streakExtendedToday: parsed.streakExtendedToday === true,
+        streakStart: typeof parsed.streakStart === "string" ? parsed.streakStart : "",
+        totalXp: parseInt(parsed.totalXp, 10) || 0,
+        avatar: parsed.avatar || "",
+        courses: courses,
+        topCourse: courses.length > 0 ? courses[0] : { title: "Language", xp: 0, flag: "🌐" },
+        coursesCount: courses.length,
+        lastUpdated: parsed.lastUpdated || new Date().toISOString()
+      }
+    }
+
     if (!parsed || !parsed.users || parsed.users.length === 0) {
+      if (parsed && parsed.valid === false && parsed.error) {
+        return { valid: false, error: String(parsed.error) }
+      }
       return { valid: false, error: "User not found on Duolingo" }
     }
 
@@ -115,9 +150,10 @@ function barText(data, showXp) {
 }
 
 function tooltipText(data) {
-  if (!data || !data.valid) return "Duolingo: Detecting user account..."
+  if (!data || !data.valid) return "Duolingo: Set your username in settings."
   var status = data.streakExtendedToday ? "Streak completed for today" : "Daily lesson pending"
-  return "Duolingo (@" + data.username + ") · " + data.streak + " day streak · " + formatNumber(data.totalXp) + " XP · " + status
+  var since = data.streakStart ? " · since " + data.streakStart : ""
+  return "Duolingo (@" + data.username + ") · " + data.streak + " day streak" + since + " · " + formatNumber(data.totalXp) + " XP · " + status
 }
 
 function statusSummary(data) {
