@@ -20,6 +20,12 @@ BarWidget {
   readonly property int xpToday: service ? service.xpToday : 0
   readonly property int goalXp: service ? service.goalXp : 50
 
+  Connections {
+    target: root.service
+    function onRequestPanelToggle() { root.togglePanel() }
+    function onRequestPanelOpen() { root.open() }
+  }
+
   function injectPanel() {
     var target = panelLoader.item
     if (!target) return

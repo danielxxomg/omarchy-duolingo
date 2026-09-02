@@ -105,6 +105,9 @@ Item {
     setSetting("goalXp", v)
   }
 
+  signal requestPanelToggle()
+  signal requestPanelOpen()
+
   function runCommand(text) {
     var parsed = Commands.parse(text, Commands.contextOf(root))
     if (!parsed.ok) return parsed.error || "Nothing to do"
@@ -311,6 +314,11 @@ Item {
 
     function streak(): string {
       return root.userData && root.userData.valid ? String(root.userData.streak) : "0"
+    }
+
+    function toggle(): string {
+      root.requestPanelToggle()
+      return "Toggling panel…"
     }
 
     function overlay(): string {

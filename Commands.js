@@ -49,8 +49,9 @@ var VERBS = [
     run: function(s) { if (s && typeof s.refresh === "function") s.refresh(); return "Refreshing Duolingo stats..." }
   },
 
-  { name: "open", aliases: ["panel"], hint: "Close overlay and open panel", ui: "close",
-    preview: function() { return "Close overlay" }
+  { name: "open", aliases: ["panel"], hint: "Open the dropdown panel", ui: "close",
+    preview: function() { return "Open panel" },
+    run: function(s) { if (s.requestPanelOpen) s.requestPanelOpen() }
   },
 
   { name: "username", aliases: ["user", "name", "u"], arg: "name", hint: "Set Duolingo username, e.g. username duo_learner",
