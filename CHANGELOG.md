@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-09-01
 
 ### Added
-- **Bar Widget (`BarWidget.qml`)**: Real-time streak pill (`🔥 45`) with dynamic color coding (Accent Green for completed, Urgent Amber for pending).
+- **Bar Widget (`BarWidget.qml`)**: Real-time streak pill (e.g. `45`) with dynamic color coding (Accent Green for completed, Urgent Amber for pending).
 - **Interactive Popup Panel (`Panel.qml`)**:
   - Full multilingua course breakdown with flags (🇬🇧, 🇯🇵, 🇮🇹, 🇧🇷, etc.) and XP progress bars.
   - Keyboard navigation (`j`/`k` to select course, `Enter` to practice, `r` to refresh, `s` for settings, `Esc` to close).
