@@ -159,16 +159,23 @@ BarWidget {
         implicitWidth: streakLabel.implicitWidth + Style.space(12)
         implicitHeight: streakLabel.implicitHeight + Style.space(5)
         radius: height / 2
+        border.width: 1
+        border.color: {
+          if (!barRow.hasData) return Qt.rgba(0.5, 0.5, 0.5, 0.30)
+          if (barRow.streakDone) return "transparent"
+          if (barRow.atRisk) return "transparent"
+          return Qt.rgba(pillGreen.r, pillGreen.g, pillGreen.b, 0.35)
+        }
 
         readonly property color pillGreen: root.accentColor
         readonly property color pillUrgent: root.urgent
 
         color: {
-          if (!barRow.hasData) return Qt.rgba(0.5, 0.5, 0.5, 0.10)
+          if (!barRow.hasData) return Qt.rgba(0.5, 0.5, 0.5, 0.22)
           if (barRow.streakDone) return Qt.rgba(pillGreen.r, pillGreen.g, pillGreen.b, 0.9)
           if (barRow.atRisk) return Qt.rgba(pillUrgent.r, pillUrgent.g, pillUrgent.b, 0.9)
           // Blend from transparent toward green as XP accumulates.
-          var a = 0.14 + 0.41 * barRow.goalFrac
+          var a = 0.30 + 0.40 * barRow.goalFrac
           var c = Qt.rgba(pillGreen.r, pillGreen.g, pillGreen.b, a)
           // Warn earlier than at-risk: tint red as the day runs out.
           return barRow.urgency > 0 ? Qt.tint(c, Qt.rgba(pillUrgent.r, pillUrgent.g, pillUrgent.b, 0.45 * barRow.urgency)) : c
