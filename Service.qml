@@ -107,10 +107,13 @@ Item {
 
   signal requestPanelToggle()
   signal requestPanelOpen()
+  signal requestOverlayClose()
 
   function runCommand(text) {
     var parsed = Commands.parse(text, Commands.contextOf(root))
     if (!parsed.ok) return parsed.error || "Nothing to do"
+    if (parsed.ui === "close") { root.requestOverlayClose(); return parsed.preview }
+    if (parsed.ui === "open") { root.requestPanelOpen(); return parsed.preview }
     if (parsed.ui) return parsed.preview
     return Commands.execute(root, parsed)
   }

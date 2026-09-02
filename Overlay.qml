@@ -167,6 +167,11 @@ Item {
 
   readonly property var ctx: Commands.contextOf(service)
   readonly property var suggestions: opened ? Commands.suggest(cmd.text, ctx, 6) : []
+
+  Connections {
+    target: root.service
+    function onRequestOverlayClose() { root.close() }
+  }
   property int selected: 0
   readonly property string ghost: {
     if (!cmd.text.length || !suggestions.length) return ""
@@ -190,6 +195,7 @@ Item {
     if (!parsed.ok) { showToast(parsed.error || "Nothing to do", true); shake.restart(); return }
     if (parsed.ui) {
       if (parsed.ui === "close") { close(); return }
+      if (parsed.ui === "open") { service.requestPanelOpen(); close(); return }
       pane = parsed.ui
       cmd.text = ""
       return
