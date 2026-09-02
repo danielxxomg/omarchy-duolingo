@@ -95,7 +95,7 @@ Configure directly via the popup settings drawer (`s`) or in `~/.config/omarchy/
         {
           "id": "user.duolingo",
           "username": "",
-          "autoDetect": true,
+          "autoDetect": false,
           "refreshMinutes": 15,
           "showXp": false,
           "remindersEnabled": true,
@@ -111,8 +111,8 @@ Configure directly via the popup settings drawer (`s`) or in `~/.config/omarchy/
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `username` | string | `""` | Duolingo username. When empty, automatically extracts from local desktop session if autoDetect is enabled. |
-| `autoDetect` | boolean | `true` | When true and username is empty, automatically detects username from local Duolingo Desktop or browser storage. Set to false to disable local scan. |
+| `username` | string | `""` | Duolingo username (recommended). Leave empty only together with `autoDetect: true`. |
+| `autoDetect` | boolean | `false` | Opt-in local username scan, OFF by default. When true and `username` is empty, reads only the LevelDB Local Storage folders listed in the Privacy section and extracts only the `user.username` field. |
 | `refreshMinutes` | integer | `15` | Polling interval in minutes. Cached state loads instantly on cold boot. |
 | `showXp` | boolean | `false` | When true, renders Total XP on the bar instead of the streak count. |
 | `remindersEnabled` | boolean | `true` | Enables evening reminder notifications when streak is unfulfilled. |
@@ -186,6 +186,32 @@ omarchy-shell user.duolingo run "<command>"   # Run any overlay command (see tab
 ```bash
 omarchy plugin remove user.duolingo
 ```
+
+---
+
+## Privacy
+
+The plugin reads **no** Duolingo credentials, cookies, or tokens. What touches local data:
+
+**Optional local username scan (`autoDetect`, OFF by default)**
+
+- Off by default: enabling the widget never scans anything unless you set `autoDetect: true` (or leave `username` empty **and** explicitly opt in).
+- Exact paths scanned (read-only):
+  - `~/.config/DL: language lessons/Local Storage/leveldb/*` (Duolingo Desktop app)
+  - `~/.config/BraveSoftware/Brave-Browser/Default/Local Storage/leveldb/*`
+  - `~/.config/google-chrome/Default/Local Storage/leveldb/*`
+  - `~/.config/chromium/Default/Local Storage/leveldb/*`
+- Single field extracted: `user.username` from Duolingo's redux state blob. Nothing else is read, stored, or transmitted by the scanner.
+- The detected username is passed to the public Duolingo stats endpoint (`duolingo.com/2017-06-30/users?username=<name>`), the same data any browser sees on a public profile.
+
+**Local files the plugin writes**
+
+- `~/.local/state/duolingo/duolingo-cache.json` — normalized public stats (username, streak, XP, courses). Created `0600`.
+- `~/.local/state/duolingo/history.json` — daily streak/XP snapshots you generate while using the widget. Created `0600`.
+
+Both files live under your user account with `0600` permissions. Uninstalling the plugin does not delete them; remove `~/.local/state/duolingo/` manually if you want the data gone.
+
+**What is never sent anywhere**: your learning history, course list, or any file contents. The only network request is the public stats lookup for the configured/detected username.
 
 ---
 

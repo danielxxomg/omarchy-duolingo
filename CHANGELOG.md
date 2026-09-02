@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-09-02
+
+### Security (marketplace review fixes)
+
+- **Opt-in local scan**: `autoDetect` now defaults to `false`. Enabling the widget never reads local browser/app storage until you explicitly opt in; the manifest label and README Privacy section disclose the exact scanned paths and the single extracted field (`user.username`) before the first scan.
+- **Hardened file I/O (`bin/duoio.py`)**: all state/cache access is descriptor-bound (`O_NOFOLLOW|O_NONBLOCK`, fstat-verified regular files — no symlink/fifo races or wedges), size-capped reads, exclusive `0600` atomic writes via rename under a pinned directory fd, revision revalidation before rename, and fsync of file and directory.
+- **Bounded scanning (`bin/detect-user.py`)**: base64 decode, gzip expansion (capped at 4 MiB decompressed), JSON parsing, and regex match collection (max 64 per file) now run under hard caps with a 20 s deadline and 16/64 MiB per-file/total budgets, so storage-controlled data cannot expand beyond memory or time bounds.
+- **Bounded fetching (`bin/fetch-duo.py`)**: the HTTP response is streamed under a 1 MiB ceiling with a producer deadline instead of an unbounded read; responses are schema-validated (cardinality, field types, string lengths, course count) and projected to a small normalized JSON document, so the QML side never buffers attacker-sized stdout and the raw upstream blob is never cached or emitted.
+- **No secrets in argv (`bin/state-io.py`)**: the private history JSON travels to the writer over stdin with a size cap instead of `bash -c` process arguments, which are world-readable via `/proc/<pid>/cmdline`.
+
+### Changed
+
+- Test suite (43 stdlib `unittest` tests) covering the io helper, scanner limits, fetch schema validation, and state I/O including symlink-refusal and revision conflicts.
+
 ## [1.4.0] - 2026-09-02
 
 ### Added
