@@ -7,9 +7,9 @@ BINDINGS_FILE="$HOME/.config/hypr/bindings.lua"
 
 echo -e "\e[33m=== Uninstalling Omarchy Duolingo Plugin ===\e[0m\n"
 
-# 1. Remove from bar
-echo -e "Removing widget from Omarchy bar..."
-omarchy bar reset 2>/dev/null || true
+# 1. Disable widget (scoped, does not reset the entire bar)
+echo -e "Disabling widget on Omarchy bar..."
+omarchy plugin disable "$PLUGIN_ID" 2>/dev/null || omarchy-shell shell setPluginEnabled "$PLUGIN_ID" false 2>/dev/null || true
 
 # 2. Clean keybindings
 if [[ -f "$BINDINGS_FILE" ]]; then
@@ -17,7 +17,8 @@ if [[ -f "$BINDINGS_FILE" ]]; then
 fi
 
 # 3. Purge cache
-rm -f "$HOME/.local/state/omarchy/duolingo-cache.json"
+rm -rf "$HOME/.local/state/duolingo"
+rm -f "$HOME/.local/state/omarchy/duolingo-cache.json"  # legacy path
 
 # 4. Remove plugin directory
 echo -e "Removing plugin files at $PLUGIN_DIR..."

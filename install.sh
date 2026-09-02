@@ -36,7 +36,19 @@ echo -e "\n\e[34mAdding widget to bar ($SECTION section)...\e[0m"
 omarchy bar move "$PLUGIN_ID" --section "$SECTION" 2>/dev/null || omarchy bar put "$PLUGIN_ID" --section "$SECTION"
 
 if [[ -n "$USERNAME" ]]; then
-  omarchy bar set "$PLUGIN_ID" "username" "\"$USERNAME\"" --json 2>/dev/null || true
+  if [[ ! "$USERNAME" =~ ^[A-Za-z0-9_.-]{2,25}$ ]]; then
+    echo -e "\e[31mInvalid username \"$USERNAME\" — must match ^[A-Za-z0-9_.-]{2,25}$ — skipping bar set.\e[0m" >&2
+  else
+    if command -v jq >/dev/null 2>&1; then
+      JSON_USER=$(jq -n --arg v "$USERNAME" '$v')
+    else
+      # Fallback: escape backslashes and quotes for JSON string
+      ESCAPED=${USERNAME//\\/\\\\}
+      ESCAPED=${ESCAPED//\"/\\\"}
+      JSON_USER="\"$ESCAPED\""
+    fi
+    omarchy bar set "$PLUGIN_ID" "username" "$JSON_USER" --json 2>/dev/null || true
+  fi
 fi
 
 # 4. Optional Hyprland Keybinding
