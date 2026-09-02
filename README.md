@@ -89,6 +89,7 @@ Configure directly via the popup settings drawer (`s`) or in `~/.config/omarchy/
         {
           "id": "user.duolingo",
           "username": "",
+          "autoDetect": true,
           "refreshMinutes": 15,
           "showXp": false,
           "remindersEnabled": true,
@@ -104,7 +105,8 @@ Configure directly via the popup settings drawer (`s`) or in `~/.config/omarchy/
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `username` | string | `""` | Duolingo username. When empty, automatically extracts from local desktop session. |
+| `username` | string | `""` | Duolingo username. When empty, automatically extracts from local desktop session if autoDetect is enabled. |
+| `autoDetect` | boolean | `true` | When true and username is empty, automatically detects username from local Duolingo Desktop or browser storage. Set to false to disable local scan. |
 | `refreshMinutes` | integer | `15` | Polling interval in minutes. Cached state loads instantly on cold boot. |
 | `showXp` | boolean | `false` | When true, renders Total XP on the bar instead of the streak count. |
 | `remindersEnabled` | boolean | `true` | Enables evening reminder notifications when streak is unfulfilled. |

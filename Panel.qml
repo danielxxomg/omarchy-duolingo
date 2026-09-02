@@ -50,6 +50,7 @@ Panel {
   readonly property bool effectiveShowXp: service ? service.showXp : (settings.showXp === true)
   readonly property bool effectiveReminders: service ? service.remindersEnabled : (settings.remindersEnabled !== false)
   readonly property int effectiveRemindHour: service ? service.remindHour : Util.clamp(parseInt(settings.remindHour !== undefined ? settings.remindHour : 20, 10) || 20, 0, 23)
+  readonly property bool effectiveAutoDetect: service ? service.autoDetect : (settings.autoDetect !== false)
 
   function open() {
     root.controller.show()
@@ -955,6 +956,33 @@ Panel {
                   Behavior on x { enabled: !root.reducedMotion; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
                 }
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.persistSettings({ reducedMotion: !root.reducedMotion }) }
+              }
+            }
+
+            // Auto-detect username toggle
+            Row {
+              width: parent.width
+              spacing: Style.space(8)
+              Text {
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width - Style.space(50)
+                text: "Auto-detect username"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+              Rectangle {
+                width: Style.space(36); height: Style.space(20); radius: 10
+                color: root.effectiveAutoDetect ? root.accentColor : Qt.rgba(1,1,1,0.15)
+                Behavior on color { enabled: !root.reducedMotion; ColorAnimation { duration: 160 } }
+                Rectangle {
+                  width: Style.space(16); height: Style.space(16); radius: 8
+                  anchors.verticalCenter: parent.verticalCenter
+                  x: root.effectiveAutoDetect ? parent.width - width - 2 : 2
+                  color: "#ffffff"
+                  Behavior on x { enabled: !root.reducedMotion; NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                }
+                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.persistSettings({ autoDetect: !root.effectiveAutoDetect }) }
               }
             }
           }

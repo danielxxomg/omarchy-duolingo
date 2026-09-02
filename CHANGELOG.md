@@ -2,8 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.4.0] - 2026-09-02
+
+### Added
+- **Privacy opt-out (`autoDetect`)**: New boolean setting `autoDetect` (default `true`) to control local username scan. When `username` is empty and `autoDetect` is false, `Service` passes `--no-detect` to `fetch-duo.py` which skips `detect-user.py` LevelDB scan and returns cached data or an error, preserving zero-config while allowing privacy-conscious users to disable local storage access. Panel toggle mirrors `reducedMotion`/`showXp` pattern. Manifest bumped to 1.4.0.
 
 ## [1.3.0] - 2026-09-01
 

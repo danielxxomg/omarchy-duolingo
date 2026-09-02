@@ -14,9 +14,22 @@ CACHE_FILE = os.path.join(CACHE_DIR, "duolingo-cache.json")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def get_username(arg):
+def parse_args(argv):
+    no_detect = False
+    username = ""
+    for a in argv:
+        if a == "--no-detect":
+            no_detect = True
+        elif not a.startswith("-") and not username:
+            username = a
+    return username, no_detect
+
+
+def get_username(arg, no_detect=False):
     if arg and arg.strip():
         return arg.strip()
+    if no_detect:
+        return ""
     detect_script = os.path.join(SCRIPT_DIR, "detect-user.py")
     if os.path.exists(detect_script):
         try:
@@ -56,8 +69,8 @@ def print_cache_if_exists():
 
 
 def main():
-    raw_user = sys.argv[1] if len(sys.argv) > 1 else ""
-    username = get_username(raw_user)
+    raw_user, no_detect = parse_args(sys.argv[1:])
+    username = get_username(raw_user, no_detect)
 
     if not username:
         if print_cache_if_exists():

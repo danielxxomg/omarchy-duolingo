@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "user.duolingo",
   "name": "Duolingo",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "author": "danielxxomg",
   "license": "MIT",
   "description": "Duolingo companion for Omarchy. Real-time daily streak monitor, multilingual progress breakdown, and smart evening streak reminders.",
@@ -35,6 +35,7 @@
     "defaultSection": "right",
     "defaults": {
       "username": "",
+      "autoDetect": true,
       "refreshMinutes": 15,
       "showXp": false,
       "remindersEnabled": true,
@@ -48,6 +49,12 @@
         "type": "string",
         "label": "Duolingo Username (leave empty to auto-detect)",
         "defaultValue": ""
+      },
+      {
+        "key": "autoDetect",
+        "type": "boolean",
+        "label": "Auto-detect username from local Duolingo Desktop or browser storage when none is set",
+        "defaultValue": true
       },
       {
         "key": "refreshMinutes",

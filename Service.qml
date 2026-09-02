@@ -19,6 +19,7 @@ Item {
   }
 
   readonly property string configuredUsername: String(widgetSetting("username", ""))
+  readonly property bool autoDetect: widgetSetting("autoDetect", true) !== false
   readonly property int refreshMinutes: Math.max(5, parseInt(widgetSetting("refreshMinutes", 15), 10) || 15)
   readonly property bool remindersEnabled: widgetSetting("remindersEnabled", true) !== false
   readonly property int remindHour: Util.clamp(parseInt(widgetSetting("remindHour", 20), 10) || 20, 0, 23)
@@ -63,6 +64,8 @@ Item {
     var user = (root.configuredUsername || "").trim()
     if (user !== "") {
       fetchProc.command = [root.pluginDir + "/bin/fetch-duo.py", user]
+    } else if (!root.autoDetect) {
+      fetchProc.command = [root.pluginDir + "/bin/fetch-duo.py", "--no-detect"]
     } else {
       fetchProc.command = [root.pluginDir + "/bin/fetch-duo.py"]
     }
