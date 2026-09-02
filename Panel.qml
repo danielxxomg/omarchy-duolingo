@@ -226,6 +226,59 @@ Panel {
             wrapMode: Text.WordWrap
             horizontalAlignment: Text.AlignHCenter
           }
+
+          // Actionable errors: give the failure a one-click next step.
+          Row {
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: Style.space(8)
+            visible: {
+              var data = root.effectiveData
+              if (!data || !data.valid) return true
+              return root.effectiveStale
+            }
+
+            component ActionChip : Rectangle {
+              id: chip
+              property string label: ""
+              signal activated()
+              implicitWidth: chipLabel.implicitWidth + Style.space(14)
+              implicitHeight: Style.space(24)
+              radius: Math.min(Style.cornerRadius, 12)
+              color: chipMouse.containsMouse ? Qt.darker(root.accentColor, 1.1) : Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.16)
+              Text {
+                id: chipLabel
+                anchors.centerIn: parent
+                text: chip.label
+                color: root.accentColor
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+              }
+              MouseArea {
+                id: chipMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: chip.activated()
+              }
+            }
+
+            ActionChip {
+              label: root.effectiveError.indexOf("not found") >= 0 ? "Change Username" : "Retry"
+              onActivated: {
+                if (root.effectiveError.indexOf("not found") >= 0) root.settingsOpen = true
+                else if (root.service && typeof root.service.refresh === "function") root.service.refresh()
+              }
+            }
+
+            ActionChip {
+              visible: root.effectiveError.indexOf("not found") < 0
+              label: "Launch Duolingo"
+              onActivated: {
+                if (root.service && typeof root.service.launchDuolingo === "function") root.service.launchDuolingo()
+              }
+            }
+          }
         }
 
         // 3. Empty username prompt
