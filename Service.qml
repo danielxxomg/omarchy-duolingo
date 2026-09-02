@@ -21,9 +21,16 @@ Item {
   readonly property int refreshMinutes: Math.max(5, parseInt(widgetSetting("refreshMinutes", 15), 10) || 15)
   readonly property bool remindersEnabled: widgetSetting("remindersEnabled", true) !== false
   readonly property int remindHour: Util.clamp(parseInt(widgetSetting("remindHour", 20), 10) || 20, 0, 23)
+  readonly property int goalXp: Util.clamp(Math.round(Number(widgetSetting("goalXp", 50))) || 50, 10, 1000)
+  readonly property bool reducedMotion: widgetSetting("reducedMotion", false) === true
+  readonly property bool showXp: widgetSetting("showXp", false) === true
 
   readonly property string pluginDir: decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "").replace(/\/$/, ""))
   readonly property string iconPath: pluginDir + "/assets/duo.png"
+
+  readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/duolingo"
+  readonly property string stateFilePath: stateDir + "/history.json"
+  readonly property int maxStateBytes: 262144
 
   property var userData: null
   property string lastError: ""
@@ -31,6 +38,23 @@ Item {
   property bool isStale: false
   property bool notifiedToday: false
   property string lastNotifiedDate: ""
+
+  property var history: Model.emptyHistory()
+  property bool historyLoaded: false
+  property bool saveQueued: false
+  property int diskRev: 0
+  property int writingRev: 0
+  property bool dead: false
+
+  readonly property int xpToday: Model.xpToday(root.userData, root.history)
+  readonly property var weekHistory: Model.weekHistory(root.history)
+  readonly property real goalFraction: Model.fraction(root.xpToday, root.goalXp)
+  readonly property bool goalMet: root.xpToday >= root.goalXp
+
+  onWidgetSettingsChanged: {
+    // Timer interval binding is declarative but may not restart; update explicitly
+    refreshTimer.interval = root.refreshMinutes * 60 * 1000
+  }
 
   function refresh() {
     if (fetchProc.running) return
@@ -72,9 +96,40 @@ Item {
     }
   }
 
+  function updateHistory(data) {
+    if (!data || !data.valid) return
+    var todayKey = Model.dayKey(new Date())
+    var h = root.history
+    if (!h || !h.days) h = Model.emptyHistory()
+    // Deep copy days to avoid mutating binding directly
+    var days = {}
+    for (var k in h.days) days[k] = h.days[k]
+    var coursesMap = {}
+    if (data.courses && data.courses.length) {
+      for (var i = 0; i < data.courses.length; i++) {
+        var c = data.courses[i]
+        var lang = c.learningLanguage || c.title || String(i)
+        coursesMap[lang] = { xp: c.xp || 0, crowns: c.crowns || 0 }
+      }
+    }
+    var existing = days[todayKey]
+    if (!existing) {
+      days[todayKey] = { streak: data.streak, totalXp: data.totalXp, firstTotalXp: data.totalXp, courses: coursesMap }
+    } else {
+      var first = existing.firstTotalXp !== undefined ? existing.firstTotalXp : existing.totalXp
+      days[todayKey] = { streak: data.streak, totalXp: data.totalXp, firstTotalXp: first, courses: coursesMap }
+    }
+    days = Model.pruneHistory(days, todayKey)
+    var next = { rev: h.rev || 0, days: days, updatedAt: new Date().toISOString() }
+    root.history = JSON.parse(JSON.stringify(next))
+    saveHistory()
+  }
+
   Component.onCompleted: {
+    loadHistory()
     refresh()
   }
+  Component.onDestruction: root.dead = true
 
   Timer {
     id: refreshTimer
@@ -111,6 +166,7 @@ Item {
           root.userData = data
           root.lastError = ""
           root.isStale = false
+          root.updateHistory(data)
           root.checkReminder()
         } else {
           // Keep previous valid data as stale if present
@@ -132,6 +188,65 @@ Item {
 
   Process {
     id: launchProc
+  }
+
+  // ---------------------------------------------------------------- persistence
+  Process {
+    id: historyReader
+    running: false
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        var parsed = null
+        try { parsed = text.trim() === "" ? null : JSON.parse(text) } catch (e) { parsed = null }
+        root.diskRev = parsed && isFinite(Number(parsed.rev)) ? Math.max(0, Math.round(Number(parsed.rev))) : 0
+        root.history = Model.normalizeHistory(parsed)
+        root.historyLoaded = true
+        if (root.saveQueued) { root.saveQueued = false; root.saveHistory() }
+      }
+    }
+  }
+
+  function loadHistory() {
+    if (historyReader.running) return
+    historyReader.command = ["bash", "-c",
+      'f="$0"; [ -e "$f" ] || exit 0; [ -L "$f" ] && exit 1; exec 3<>"$f" || exit 1; '
+      + '[ "$(stat -Lc %F /proc/self/fd/3)" = "regular file" ] || exit 1; '
+      + 'head -c ' + root.maxStateBytes + ' <&3',
+      root.stateFilePath]
+    historyReader.running = true
+  }
+
+  Process {
+    id: historyWriter
+    running: false
+    onExited: function(code, status) {
+      if (code === 3) {
+        root.loadHistory()
+        return
+      }
+      if (code === 0) {
+        root.diskRev = root.writingRev
+      }
+      if (root.saveQueued) { root.saveQueued = false; root.saveHistory() }
+    }
+  }
+
+  function saveHistory() {
+    if (!root.historyLoaded || root.dead) return
+    if (historyWriter.running || historyReader.running) { root.saveQueued = true; return }
+    root.writingRev = root.diskRev + 1
+    var body = JSON.stringify(root.history)
+    // Ensure rev is first key for grep-friendly writes
+    var payload = '{"rev":' + root.writingRev + ',' + body.slice(1)
+    historyWriter.command = ["bash", "-c",
+      'mkdir -p "$0" || exit 1; '
+      + 'if [ -f "$1" ] && [ ! -L "$1" ]; then cur=$(head -c 64 "$1" | sed -n \'s/^{ *"rev": *\\([0-9]*\\).*/\\1/p\'); '
+      + '  [ -n "$cur" ] && [ "$cur" -ge "$3" ] && exit 3; fi; '
+      + 'tmp=$(mktemp "$0/.duolingo.XXXXXXXX") && printf \'%s\' "$2" > "$tmp" '
+      + '&& mv -f "$tmp" "$1" || { rm -f "$tmp"; exit 1; }',
+      root.stateDir, root.stateFilePath, payload, String(root.writingRev)]
+    historyWriter.running = true
   }
 
   IpcHandler {
