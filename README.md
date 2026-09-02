@@ -13,7 +13,7 @@
 
 | Overlay command palette | Popup panel | Settings |
 | :---: | :---: | :---: |
-| ![Overlay command palette](preview.png) | ![Popup panel](assets/screenshot.png) | ![Settings](assets/screenshot-settings.png) |
+| ![Overlay command palette](preview.png) | ![Popup panel](assets/screenshot.webp) | ![Settings](assets/screenshot-settings.webp) |
 
 ---
 
