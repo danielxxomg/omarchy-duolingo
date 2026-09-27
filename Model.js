@@ -242,25 +242,25 @@ function xpToday(userData, history) {
   var current = Math.max(0, Math.round(Number(userData.totalXp)) || 0)
   if (!history || !history.days || typeof history.days !== "object") return 0
   var today = dayKey(new Date())
-  var keys = Object.keys(history.days).sort()
-  if (keys.length === 0) return 0
-  var latestPrior = null
-  for (var i = keys.length - 1; i >= 0; i--) {
-    if (keys[i] < today) { latestPrior = keys[i]; break }
-  }
-  if (latestPrior !== null) {
-    var priorTotal = Number(history.days[latestPrior].totalXp) || 0
+  var yesterday = dayKey(shiftDay(new Date(), -1))
+
+  // 1. If yesterday snapshot exists, baseline is yesterday totalXp.
+  if (history.days[yesterday]) {
+    var priorTotal = Number(history.days[yesterday].totalXp) || 0
     var diff = current - priorTotal
     return diff > 0 ? diff : 0
   }
-  // No prior day: use today's first snapshot if present
+
+  // 2. If yesterday snapshot is missing (multi-day gap / tracking was down / fresh install),
+  // do NOT subtract a snapshot from weeks ago. Use today's initial snapshot baseline.
   if (history.days[today]) {
     var entry = history.days[today]
     var base = entry.firstTotalXp !== undefined ? Number(entry.firstTotalXp) : Number(entry.totalXp)
-    if (!isFinite(base)) base = 0
+    if (!isFinite(base)) base = current
     var d = current - base
     return d > 0 ? d : 0
   }
+
   return 0
 }
 
@@ -271,26 +271,26 @@ function weekHistory(history) {
   var today = new Date()
   var letters = ["S", "M", "T", "W", "T", "F", "S"]
   var daysMap = history && history.days ? history.days : {}
-  var sortedKeys = Object.keys(daysMap).sort()
   for (var i = 6; i >= 0; i--) {
     var d = shiftDay(today, -i)
     var key = dayKey(d)
+    var prevKey = dayKey(shiftDay(d, -1))
     var letter = letters[d.getDay()]
     var entry = daysMap[key]
     var xpEarned = 0
     var streakAtDay = entry ? (Number(entry.streak) || 0) : 0
     if (entry) {
-      var prior = null
-      for (var j = sortedKeys.length - 1; j >= 0; j--) {
-        if (sortedKeys[j] < key) { prior = sortedKeys[j]; break }
-      }
-      if (prior !== null) {
+      if (daysMap[prevKey]) {
         var curTotal = Number(entry.totalXp) || 0
-        var priorTotal = Number(daysMap[prior].totalXp) || 0
+        var priorTotal = Number(daysMap[prevKey].totalXp) || 0
         var diff = curTotal - priorTotal
         xpEarned = diff > 0 ? diff : 0
+      } else if (entry.firstTotalXp !== undefined) {
+        var curTotal = Number(entry.totalXp) || 0
+        var firstTotal = Number(entry.firstTotalXp) || 0
+        var diff = curTotal - firstTotal
+        xpEarned = diff > 0 ? diff : 0
       } else {
-        // First tracked day: xpEarned stays 0 for honesty (no baseline before tracking)
         xpEarned = 0
       }
     }

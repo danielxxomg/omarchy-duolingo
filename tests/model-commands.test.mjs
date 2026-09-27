@@ -151,6 +151,20 @@ test("xpToday uses latest prior day baseline", () => {
   assert.equal(model.xpToday(userData, h), 100);
 });
 
+test("xpToday ignores multi-day gaps and uses today firstTotalXp baseline", () => {
+  const today = model.dayKey(new Date());
+  const monthAgo = model.dayKey(model.shiftDay(new Date(), -25));
+  const h = model.normalizeHistory({
+    rev: 3,
+    days: {
+      [monthAgo]: { streak: 0, totalXp: 19324, courses: {} },
+      [today]: { streak: 0, totalXp: 19843, firstTotalXp: 19843, courses: {} },
+    },
+  });
+  const userData = { valid: true, totalXp: 19843 };
+  assert.equal(model.xpToday(userData, h), 0);
+});
+
 test("xpToday is zero without history", () => {
   assert.equal(model.xpToday({ valid: true, totalXp: 999 }, model.emptyHistory()), 0);
 });
