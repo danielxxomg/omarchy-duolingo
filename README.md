@@ -4,7 +4,7 @@
 [![Platform: Omarchy Linux](https://img.shields.io/badge/Platform-Omarchy%20Linux-orange.svg)](https://omarchy.org)
 [![Quickshell: QML](https://img.shields.io/badge/Engine-Quickshell%20%2F%20QML-blue.svg)](https://quickshell.outfoxxed.me)
 <p align="center">
-  <img src="preview.png" alt="Duolingo Omarchy Plugin Preview" width="720">
+  <img src="assets/banner.png" alt="Duolingo for Omarchy" width="760">
 </p>
 
 > Track your Duolingo streak in real-time on your status bar, monitor multilingual course progress, and get evening reminder notifications when your daily habit is at risk.

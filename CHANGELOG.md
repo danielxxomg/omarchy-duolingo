@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-09-26
+
+### Fixed
+
+- **Tracking gaps**: Prevent multi-day tracking gaps from artificially inflating `xpToday` and `weekHistory` in `Model.js`.
+- **LevelDB & Auto-detection**: Elevate decompression ceiling to 32 MiB and defragment multi-chunk LevelDB WAL records in `bin/detect-user.py`.
+- **API resilience**: Support regional language codes (e.g. `nl-NL`, `zh_CN`), truncate polyglot course lists instead of rejecting, and preserve CloudFront avatar URLs up to 1024 characters in `bin/fetch-duo.py`.
+- **Persistence deadlock**: Eliminate duplicate `rev` key injection in `Service.qml` and assign executable mode (`100755`) to `bin/state-io.py`.
+- **UI & Keyboard focus**: Prevent `PanelKeyCatcher` from intercepting keystrokes when the settings input field has active focus, repair `hoursToMidnight` scope in `BarWidget.qml`, and ensure today's goal progress is visible with auto-detected users.
+- **Launchers**: Discover installed freedesktop WebApps (e.g. ICE / Firefox) before falling back to generic browser in `bin/launch-duo.sh`.
+
+### Added
+
+- **Hero Banner**: New retro-pixel-art project branding banner in `assets/banner.png`.
+
 ## [1.5.1] - 2026-09-02
 
 ### Changed
