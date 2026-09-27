@@ -39,7 +39,7 @@ CANDIDATE_PATHS = [
     "~/.local/share/ice/firefox/*/storage/default/https+++www.duolingo.com/ls/data.sqlite",
 ]
 
-RECORD_RE = re.compile(r'"(H4sIAAAAA[A-Za-z0-9+/=]+)"')
+RECORD_RE = re.compile(r'"(H4sI[A-Za-z0-9+/=]+)"')
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{2,25}$")
 
 
@@ -95,7 +95,7 @@ def _extract_from_file(path, deadline):
         if user:
             return user
     user = _extract_from_content(content, deadline)
-    if not user and (path.endswith(".log") or b"H4sIAAAAA" in content):
+    if not user and (path.endswith(".log") or b"H4sI" in content):
         user = _extract_from_leveldb_log(content, deadline)
     return user
 

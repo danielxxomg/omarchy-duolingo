@@ -110,7 +110,7 @@ class TestExtraction(DetectUserTestBase):
             }
         }
         raw = json.dumps(user_dict).encode("utf-8")
-        compressed = gzip.compress(raw)
+        compressed = gzip.compress(raw, mtime=0)
         b64 = base64.b64encode(compressed).decode("ascii")
         rec = ('"' + b64 + '"').encode("latin-1")
         self.assertGreater(len(rec), 70000)
