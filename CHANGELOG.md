@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Hero Banner**: New retro-pixel-art project branding banner in `assets/banner.png`.
+- **Hero Banner**: New retro-pixel-art project branding banner in `preview.png` and preserved overlay screenshot in `assets/screenshot-overlay.webp`.
 
 ## [1.5.1] - 2026-09-02
 

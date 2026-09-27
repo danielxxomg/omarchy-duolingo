@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Verify executable permissions
+        run: |
+          test -x bin/fetch-duo.py
+          test -x bin/detect-user.py
+          test -x bin/state-io.py
+          test -x bin/launch-duo.sh
+
+      - name: Validate manifest schema
+        run: |
+          jq -e . manifest.json > /dev/null
+          jq -e '.schemaVersion == 1' manifest.json
+          jq -e '.id == "user.duolingo"' manifest.json
+          jq -e '.version | type == "string"' manifest.json
+          jq -e '.kinds | length > 0' manifest.json
+
+      - name: Run Python unit tests
+        run: python3 -m unittest discover tests -v
+
+      - name: Run Node.js tests
+        run: node --test tests/*.test.mjs

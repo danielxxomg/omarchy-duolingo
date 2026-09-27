@@ -3,8 +3,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform: Omarchy Linux](https://img.shields.io/badge/Platform-Omarchy%20Linux-orange.svg)](https://omarchy.org)
 [![Quickshell: QML](https://img.shields.io/badge/Engine-Quickshell%20%2F%20QML-blue.svg)](https://quickshell.outfoxxed.me)
+[![CI](https://github.com/danielxxomg/omarchy-duolingo/actions/workflows/ci.yml/badge.svg)](https://github.com/danielxxomg/omarchy-duolingo/actions/workflows/ci.yml)
 <p align="center">
-  <img src="assets/banner.png" alt="Duolingo for Omarchy" width="760">
+  <img src="preview.png" alt="Duolingo for Omarchy" width="760">
 </p>
 
 > Track your Duolingo streak in real-time on your status bar, monitor multilingual course progress, and get evening reminder notifications when your daily habit is at risk.
@@ -13,7 +14,7 @@
 
 | Overlay command palette | Popup panel | Settings |
 | :---: | :---: | :---: |
-| ![Overlay command palette](preview.png) | ![Popup panel](assets/screenshot.webp) | ![Settings](assets/screenshot-settings.webp) |
+| ![Overlay command palette](assets/screenshot-overlay.webp) | ![Popup panel](assets/screenshot.webp) | ![Settings](assets/screenshot-settings.webp) |
 
 ---
 
