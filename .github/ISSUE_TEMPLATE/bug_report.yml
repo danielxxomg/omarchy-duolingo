@@ -1,0 +1,59 @@
+name: Bug Report
+description: Report a reproducible bug or issue with omarchy-duolingo
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please provide as much detail as possible to help us investigate and resolve it quickly.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe what happened...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the behavior.
+      placeholder: |
+        1. Open panel or bar widget
+        2. Set username to '...'
+        3. Run command ...
+        4. See error
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Details about your environment.
+      value: |
+        - Omarchy / Quattro Version:
+        - Linux Distribution:
+        - Browser / Duolingo App (if using auto-detect):
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Terminal Logs
+      description: Output from running `omarchy-shell user.duolingo status` or helper scripts in your terminal.
+      render: shell
+      placeholder: |
+        $ omarchy-shell user.duolingo status
+        ...
+    validations:
+      required: false
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: What should have happened instead?
+    validations:
+      required: true
