@@ -142,37 +142,127 @@ Panel {
         anchors.fill: parent
         spacing: Style.space(12)
 
-        // 1. Native Omarchy Hero
-        PanelHero {
-          title: root.effectiveData && root.effectiveData.valid ? root.effectiveData.fullname : "Duolingo Tracker"
-          meta: {
-            if (!root.effectiveData || !root.effectiveData.valid)
-              return root.hasConfiguredUsername ? "Fetching stats..." : "Set your username in Settings"
-            var base = "@" + root.effectiveData.username
-            if (root.effectiveData.streakStart) base += " · streak since " + root.effectiveData.streakStart
-            return base
+        // 1. User Profile Header
+        Item {
+          id: profileHeader
+          width: parent.width
+          implicitHeight: Math.max(avatarImage.height, headerLabelsCol.implicitHeight, streakTrailingPill.implicitHeight)
+
+          Image {
+            id: avatarImage
+            source: (root.effectiveData && root.effectiveData.avatar) ? root.effectiveData.avatar : Qt.resolvedUrl("assets/duo.png")
+            width: Style.space(38)
+            height: Style.space(38)
+            fillMode: Image.PreserveAspectFit
+            smooth: true
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
           }
-          foreground: root.foreground
-          fontFamily: root.fontFamily
-          iconComponent: Component {
-            Image {
-              source: (root.effectiveData && root.effectiveData.avatar) ? root.effectiveData.avatar : Qt.resolvedUrl("assets/duo.png")
-              width: Style.space(36)
-              height: Style.space(36)
-              fillMode: Image.PreserveAspectFit
-              smooth: true
+
+          Column {
+            id: headerLabelsCol
+            anchors.left: avatarImage.right
+            anchors.leftMargin: Style.space(12)
+            anchors.right: streakTrailingPill.left
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Style.space(2)
+
+            Text {
+              id: fullnameText
+              textFormat: Text.PlainText
+              width: Math.min(implicitWidth, parent.width)
+              text: root.effectiveData && root.effectiveData.valid ? root.effectiveData.fullname : "Duolingo Tracker"
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.title
+              font.bold: true
+              elide: Text.ElideRight
+            }
+
+            Text {
+              id: memberSinceText
+              textFormat: Text.PlainText
+              visible: !!(root.effectiveData && root.effectiveData.valid && Model.formatMemberSince(root.effectiveData.creationDate) !== "")
+              text: (root.effectiveData && root.effectiveData.valid) ? Model.formatMemberSince(root.effectiveData.creationDate) : ""
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: false
+              elide: Text.ElideRight
+            }
+
+            Row {
+              id: usernameRow
+              spacing: Style.space(6)
+              visible: !!(root.effectiveData && root.effectiveData.valid)
+
+              Text {
+                id: usernameText
+                textFormat: Text.PlainText
+                text: root.effectiveData ? "@" + root.effectiveData.username : ""
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+                anchors.verticalCenter: parent.verticalCenter
+              }
+
+              // Golden / amber "SUPER" badge tag next to username
+              Rectangle {
+                id: superBadge
+                visible: !!(root.effectiveData && root.effectiveData.hasPlus)
+                implicitWidth: superBadgeLabel.implicitWidth + Style.space(8)
+                implicitHeight: Style.space(16)
+                radius: Math.min(Style.cornerRadius, 4)
+                color: Qt.rgba(0.98, 0.73, 0.01, 0.16)
+                border.color: Qt.rgba(0.98, 0.73, 0.01, 0.5)
+                border.width: 1
+                anchors.verticalCenter: parent.verticalCenter
+
+                Text {
+                  id: superBadgeLabel
+                  anchors.centerIn: parent
+                  text: "SUPER"
+                  color: "#e5a100"
+                  font.family: root.fontFamily
+                  font.pixelSize: Math.max(9, Math.round(Style.font.caption * 0.8))
+                  font.bold: true
+                  font.letterSpacing: 0.8
+                }
+              }
+            }
+
+            Text {
+              id: fallbackPromptText
+              textFormat: Text.PlainText
+              visible: !root.effectiveData || !root.effectiveData.valid
+              width: parent.width
+              text: root.hasConfiguredUsername ? "Fetching stats..." : "Set your username in Settings"
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              elide: Text.ElideRight
             }
           }
-          trailingControl: Component {
-            Rectangle {
-              implicitWidth: streakPillRow.implicitWidth + Style.space(12)
-              implicitHeight: Style.space(26)
-              radius: Math.min(Style.cornerRadius, 6)
-              color: root.effectiveData && root.effectiveData.streakExtendedToday ? Qt.rgba(0.34, 0.8, 0.01, 0.18) : Qt.rgba(1.0, 0.4, 0.0, 0.18)
+
+          Rectangle {
+            id: streakTrailingPill
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            implicitWidth: streakPillCol.implicitWidth + Style.space(12)
+            implicitHeight: Math.max(Style.space(26), streakPillCol.implicitHeight + Style.space(6))
+            radius: Math.min(Style.cornerRadius, 6)
+            color: root.effectiveData && root.effectiveData.streakExtendedToday ? Qt.rgba(0.34, 0.8, 0.01, 0.18) : Qt.rgba(1.0, 0.4, 0.0, 0.18)
+
+            Column {
+              id: streakPillCol
+              anchors.centerIn: parent
+              spacing: Style.space(1)
 
               Row {
-                id: streakPillRow
-                anchors.centerIn: parent
+                anchors.horizontalCenter: parent.horizontalCenter
                 spacing: Style.space(4)
 
                 Text {
@@ -183,6 +273,37 @@ Panel {
                   font.bold: true
                 }
               }
+
+              Text {
+                id: streakBestLabel
+                visible: !!(root.effectiveData && root.effectiveData.valid && root.effectiveData.longestStreak > root.effectiveData.streak)
+                text: root.effectiveData ? "Best: " + root.effectiveData.longestStreak + "d" : ""
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Math.max(9, Math.round(Style.font.caption * 0.8))
+                font.bold: true
+                anchors.horizontalCenter: parent.horizontalCenter
+              }
+            }
+
+            ToolTip.visible: streakMouseArea.containsMouse
+            ToolTip.delay: 300
+            ToolTip.text: {
+              if (!root.effectiveData || !root.effectiveData.valid) return "Streak: 0 days"
+              var txt = "Streak: " + root.effectiveData.streak + " days"
+              if (root.effectiveData.longestStreak > root.effectiveData.streak) {
+                txt += " · Best: " + root.effectiveData.longestStreak + " days"
+              }
+              if (root.effectiveData.streakStart) {
+                txt += " · Streak since " + root.effectiveData.streakStart
+              }
+              return txt
+            }
+
+            MouseArea {
+              id: streakMouseArea
+              anchors.fill: parent
+              hoverEnabled: true
             }
           }
         }

@@ -19,7 +19,7 @@ function loadLibrary(name) {
   if (/^\.import\s+"Model\.js"\s+as\s+Model/m.test(src)) {
     src = src.replace(/^\.import\s+"Model\.js"\s+as\s+Model.*$/m, "const Model = __model;");
   }
-  new Function("__exports", "__model", src + "\n;Object.assign(__exports, { dayKey, pad2, FLAG_MAP, getLanguageFlag, parseUserData, formatNumber, barText, tooltipText, statusSummary, emptyHistory, pruneHistory, normalizeHistory, xpToday, weekHistory, fraction })")(exports, model);
+  new Function("__exports", "__model", src + "\n;Object.assign(__exports, { dayKey, pad2, FLAG_MAP, getLanguageFlag, parseUserData, formatMemberSince, formatNumber, barText, tooltipText, statusSummary, emptyHistory, pruneHistory, normalizeHistory, xpToday, weekHistory, fraction })")(exports, model);
   return exports;
 }
 
@@ -34,7 +34,7 @@ function loadLibraryInto(exports, name) {
   src = src.replace(/^\.pragma library.*$/m, "");
   const fn = new Function("__exports", src + `
     ;Object.assign(__exports, { pad2, dayKey, FLAG_MAP, getLanguageFlag, parseUserData,
-      formatNumber, barText, tooltipText, statusSummary, emptyHistory, keyToDate,
+      formatMemberSince, formatNumber, barText, tooltipText, statusSummary, emptyHistory, keyToDate,
       shiftDay, pruneHistory, normalizeHistory, xpToday, weekHistory, fraction })`);
   fn(exports);
 }
@@ -62,6 +62,9 @@ const NORMALIZED = {
   avatar: "",
   streak: 12,
   streakExtendedToday: true,
+  hasPlus: true,
+  creationDate: 1612345678,
+  longestStreak: 45,
   totalXp: 5000,
   courses: [
     { title: "Spanish", learningLanguage: "es", xp: 4000, crowns: 20, flag: "🇪🇸", fraction: 1.0 },
@@ -80,8 +83,63 @@ test("parseUserData accepts the normalized helper document", () => {
   assert.equal(r.username, "emma_learn");
   assert.equal(r.streak, 12);
   assert.equal(r.streakExtendedToday, true);
+  assert.equal(r.hasPlus, true);
+  assert.equal(r.creationDate, 1612345678);
+  assert.equal(r.longestStreak, 45);
   assert.equal(r.courses[0].flag, "🇪🇸");
   assert.equal(r.courses[1].fraction, 0.25);
+});
+
+test("parseUserData preserves rich profile fields in normalized and legacy shapes", () => {
+  // Legacy user with streakData
+  const legacy = {
+    users: [{
+      username: "legacy_user",
+      name: "Legacy Name",
+      streak: 15,
+      hasPlus: true,
+      creationDate: 1546300800,
+      streakData: { longestStreak: { length: 30 } },
+      totalXp: 2000,
+      courses: []
+    }]
+  };
+  const rLegacy = model.parseUserData(JSON.stringify(legacy));
+  assert.equal(rLegacy.valid, true);
+  assert.equal(rLegacy.hasPlus, true);
+  assert.equal(rLegacy.creationDate, 1546300800);
+  assert.equal(rLegacy.longestStreak, 30);
+
+  // Normalized without longestStreak falls back to streak
+  const noLongest = {
+    valid: true,
+    username: "u1",
+    streak: 8,
+    courses: []
+  };
+  const rNoLongest = model.parseUserData(JSON.stringify(noLongest));
+  assert.equal(rNoLongest.valid, true);
+  assert.equal(rNoLongest.hasPlus, false);
+  assert.equal(rNoLongest.creationDate, null);
+  assert.equal(rNoLongest.longestStreak, 8);
+});
+
+test("formatMemberSince formats timestamps into year string and rejects invalid values", () => {
+  // Seconds timestamp (2021)
+  assert.equal(model.formatMemberSince(1612345678), "Member since 2021");
+  // Milliseconds timestamp (2021)
+  assert.equal(model.formatMemberSince(1612345678000), "Member since 2021");
+  // Earlier year (2018)
+  assert.equal(model.formatMemberSince(1546300800), "Member since 2019");
+
+  // Invalid / null / empty
+  assert.equal(model.formatMemberSince(null), "");
+  assert.equal(model.formatMemberSince(undefined), "");
+  assert.equal(model.formatMemberSince(0), "");
+  assert.equal(model.formatMemberSince(-100), "");
+  assert.equal(model.formatMemberSince("invalid"), "");
+  assert.equal(model.formatMemberSince(NaN), "");
+  assert.equal(model.formatMemberSince({}), "");
 });
 
 test("parseUserData surfaces helper error strings", () => {
@@ -197,6 +255,35 @@ test("barText shows streak or xp", () => {
 test("formatNumber adds thousands separators", () => {
   assert.equal(model.formatNumber(1234567), "1,234,567");
   assert.equal(model.formatNumber(999), "999");
+});
+
+test("tooltipText formats streak, best streak, xp, and status", () => {
+  const withRecord = {
+    valid: true,
+    username: "emma_learn",
+    streak: 12,
+    longestStreak: 45,
+    streakExtendedToday: true,
+    totalXp: 5000,
+  };
+  const textRecord = model.tooltipText(withRecord);
+  assert.match(textRecord, /12 day streak \(best: 45d\)/);
+  assert.match(textRecord, /5,000 XP/);
+  assert.match(textRecord, /Streak completed for today/);
+
+  const withoutRecord = {
+    valid: true,
+    username: "emma_learn",
+    streak: 12,
+    longestStreak: 12,
+    streakExtendedToday: false,
+    totalXp: 5000,
+  };
+  const textNoRecord = model.tooltipText(withoutRecord);
+  assert.match(textNoRecord, /12 day streak ·/);
+  assert.doesNotMatch(textNoRecord, /\(best:/);
+
+  assert.equal(model.tooltipText(null), "Duolingo: Set your username in settings.");
 });
 
 // --- Commands grammar ---------------------------------------------------------

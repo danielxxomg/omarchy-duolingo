@@ -223,6 +223,90 @@ class TestRefusals(FetchDuoTestBase):
         data = json.loads(out)
         self.assertEqual(data["avatar"], long_avatar)
 
+    def test_has_plus_handling(self):
+        # Explicit true
+        users_plus = [{"username": "plus_user", "streak": 5, "totalXp": 100, "hasPlus": True, "courses": []}]
+        with mock.patch.object(self.mod.urllib.request, "urlopen",
+                               return_value=self.fake_response(self.body(users_plus))):
+            out, code = self.mod.fetch("plus_user", deadline=time.monotonic() + 10)
+        self.assertEqual(code, 0)
+        self.assertTrue(json.loads(out)["hasPlus"])
+
+        # Explicit false
+        users_free = [{"username": "free_user", "streak": 5, "totalXp": 100, "hasPlus": False, "courses": []}]
+        with mock.patch.object(self.mod.urllib.request, "urlopen",
+                               return_value=self.fake_response(self.body(users_free))):
+            out, code = self.mod.fetch("free_user", deadline=time.monotonic() + 10)
+        self.assertEqual(code, 0)
+        self.assertFalse(json.loads(out)["hasPlus"])
+
+        # Omitted defaults to false
+        users_default = [{"username": "default_user", "streak": 5, "totalXp": 100, "courses": []}]
+        with mock.patch.object(self.mod.urllib.request, "urlopen",
+                               return_value=self.fake_response(self.body(users_default))):
+            out, code = self.mod.fetch("default_user", deadline=time.monotonic() + 10)
+        self.assertEqual(code, 0)
+        self.assertFalse(json.loads(out)["hasPlus"])
+
+    def test_creation_date_handling(self):
+        # Valid integer timestamp
+        users_valid = [{
+            "username": "old_user", "streak": 1, "totalXp": 10,
+            "creationDate": 1612345678, "courses": [],
+        }]
+        with mock.patch.object(self.mod.urllib.request, "urlopen",
+                               return_value=self.fake_response(self.body(users_valid))):
+            out, code = self.mod.fetch("old_user", deadline=time.monotonic() + 10)
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["creationDate"], 1612345678)
+
+        # Invalid / null / string / bool timestamps become None
+        for bad_val in [None, "2021-01-01", True, False, 0, -100]:
+            users_bad = [{
+                "username": "bad_ts_user", "streak": 1, "totalXp": 10,
+                "creationDate": bad_val, "courses": [],
+            }]
+            with mock.patch.object(self.mod.urllib.request, "urlopen",
+                                   return_value=self.fake_response(self.body(users_bad))):
+                out, code = self.mod.fetch("bad_ts_user", deadline=time.monotonic() + 10)
+            self.assertEqual(code, 0)
+            self.assertIsNone(json.loads(out)["creationDate"])
+
+    def test_longest_streak_handling(self):
+        # streakData.longestStreak.length present and valid
+        users_with_ls = [{
+            "username": "streak_king", "streak": 10, "totalXp": 500,
+            "streakData": {"longestStreak": {"length": 150}},
+            "courses": [],
+        }]
+        with mock.patch.object(self.mod.urllib.request, "urlopen",
+                               return_value=self.fake_response(self.body(users_with_ls))):
+            out, code = self.mod.fetch("streak_king", deadline=time.monotonic() + 10)
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["longestStreak"], 150)
+
+        # streakData missing longestStreak -> fallback to current streak
+        users_fallback = [{
+            "username": "streak_fallback", "streak": 22, "totalXp": 500,
+            "streakData": {}, "courses": [],
+        }]
+        with mock.patch.object(self.mod.urllib.request, "urlopen",
+                               return_value=self.fake_response(self.body(users_fallback))):
+            out, code = self.mod.fetch("streak_fallback", deadline=time.monotonic() + 10)
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["longestStreak"], 22)
+
+        # streakData missing entirely -> fallback to current streak
+        users_no_streak_data = [{
+            "username": "streak_none", "streak": 7, "totalXp": 500,
+            "courses": [],
+        }]
+        with mock.patch.object(self.mod.urllib.request, "urlopen",
+                               return_value=self.fake_response(self.body(users_no_streak_data))):
+            out, code = self.mod.fetch("streak_none", deadline=time.monotonic() + 10)
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["longestStreak"], 7)
+
 
 if __name__ == "__main__":
     unittest.main()

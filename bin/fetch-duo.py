@@ -194,6 +194,30 @@ def normalize(body):
             raw_start = current.get("startDate")
             if isinstance(raw_start, str) and re.match(r"^\d{4}-\d{2}-\d{2}$", raw_start):
                 streak_start = raw_start
+
+    has_plus = bool(user.get("hasPlus", False))
+
+    raw_creation = user.get("creationDate")
+    creation_date = (
+        raw_creation
+        if isinstance(raw_creation, int) and not isinstance(raw_creation, bool) and raw_creation > 0
+        else None
+    )
+
+    longest_streak = None
+    if isinstance(streak_data, dict):
+        raw_longest = streak_data.get("longestStreak")
+        if isinstance(raw_longest, dict):
+            ls_len = raw_longest.get("length")
+            if isinstance(ls_len, int) and not isinstance(ls_len, bool) and 0 <= ls_len <= 100000:
+                longest_streak = ls_len
+    if longest_streak is None:
+        raw_streak = user.get("streak")
+        if isinstance(raw_streak, int) and not isinstance(raw_streak, bool) and 0 <= raw_streak <= 100000:
+            longest_streak = raw_streak
+        else:
+            longest_streak = streak
+
     raw_courses = user.get("courses", [])
     if not isinstance(raw_courses, list):
         return None
@@ -228,6 +252,9 @@ def normalize(body):
         "streak": streak,
         "streakExtendedToday": extended,
         "streakStart": streak_start,
+        "hasPlus": has_plus,
+        "creationDate": creation_date,
+        "longestStreak": longest_streak,
         "totalXp": total_xp,
         "courses": courses,
         "topCourse": courses[0] if courses else None,

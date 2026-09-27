@@ -70,6 +70,9 @@ function parseUserData(rawText) {
           fraction: typeof c.fraction === "number" ? Math.max(0, Math.min(1, c.fraction)) : 0
         })
       }
+      var longestStreakVal1 = (typeof parsed.longestStreak === "number" && !isNaN(parsed.longestStreak))
+        ? Math.max(0, parseInt(parsed.longestStreak, 10) || 0)
+        : (parseInt(parsed.streak, 10) || 0)
       return {
         valid: true,
         username: parsed.username || "",
@@ -77,6 +80,9 @@ function parseUserData(rawText) {
         streak: parseInt(parsed.streak, 10) || 0,
         streakExtendedToday: parsed.streakExtendedToday === true,
         streakStart: typeof parsed.streakStart === "string" ? parsed.streakStart : "",
+        hasPlus: parsed.hasPlus === true,
+        creationDate: (typeof parsed.creationDate === "number" && !isNaN(parsed.creationDate)) ? parsed.creationDate : null,
+        longestStreak: longestStreakVal1,
         totalXp: parseInt(parsed.totalXp, 10) || 0,
         avatar: parsed.avatar || "",
         courses: courses,
@@ -120,12 +126,21 @@ function parseUserData(rawText) {
 
     var topCourse = courses.length > 0 ? courses[0] : { title: "Language", xp: 0, flag: "🌐" }
 
+    var longestStreakVal2 = parseInt(user.streak, 10) || 0
+    if (user.streakData && user.streakData.longestStreak && typeof user.streakData.longestStreak.length === "number") {
+      longestStreakVal2 = parseInt(user.streakData.longestStreak.length, 10) || longestStreakVal2
+    }
+
     return {
       valid: true,
       username: user.username || "",
       fullname: user.name || user.fullname || user.username || "Duolingo Learner",
       streak: parseInt(user.streak, 10) || 0,
       streakExtendedToday: Boolean(user.streak_extended_today),
+      streakStart: (user.streakData && user.streakData.currentStreak && typeof user.streakData.currentStreak.startDate === "string") ? user.streakData.currentStreak.startDate : "",
+      hasPlus: Boolean(user.hasPlus),
+      creationDate: (typeof user.creationDate === "number" && !isNaN(user.creationDate)) ? user.creationDate : null,
+      longestStreak: longestStreakVal2,
       totalXp: parseInt(user.totalXp, 10) || 0,
       avatar: user.picture ? (user.picture.startsWith("//") ? "https:" + user.picture : user.picture) : "",
       courses: courses,
@@ -136,6 +151,17 @@ function parseUserData(rawText) {
   } catch (err) {
     return { valid: false, error: "JSON parse failed: " + err.message }
   }
+}
+
+function formatMemberSince(creationDate) {
+  if (creationDate === null || creationDate === undefined) return ""
+  var num = Number(creationDate)
+  if (isNaN(num) || !isFinite(num) || num <= 0) return ""
+  var ts = num < 1e11 ? num * 1000 : num
+  var date = new Date(ts)
+  var year = date.getUTCFullYear()
+  if (isNaN(year) || year < 2000 || year > 2100) return ""
+  return "Member since " + year
 }
 
 function formatNumber(num) {
@@ -152,8 +178,9 @@ function barText(data, showXp) {
 function tooltipText(data) {
   if (!data || !data.valid) return "Duolingo: Set your username in settings."
   var status = data.streakExtendedToday ? "Streak completed for today" : "Daily lesson pending"
+  var best = (data.longestStreak && data.longestStreak > data.streak) ? " (best: " + data.longestStreak + "d)" : ""
   var since = data.streakStart ? " · since " + data.streakStart : ""
-  return "Duolingo (@" + data.username + ") · " + data.streak + " day streak" + since + " · " + formatNumber(data.totalXp) + " XP · " + status
+  return "Duolingo (@" + data.username + ") · " + data.streak + " day streak" + best + since + " · " + formatNumber(data.totalXp) + " XP · " + status
 }
 
 function statusSummary(data) {

@@ -72,6 +72,13 @@ class TestQmlContract(unittest.TestCase):
     def test_top_course_is_first(self):
         self.assertEqual(self.doc["topCourse"]["learningLanguage"], "es")
 
+    def test_rich_profile_fields_present(self):
+        self.assertIn("hasPlus", self.doc)
+        self.assertIn("creationDate", self.doc)
+        self.assertIn("longestStreak", self.doc)
+        self.assertIsInstance(self.doc["hasPlus"], bool)
+        self.assertEqual(self.doc["longestStreak"], 12)  # fallback to streak (12)
+
     def test_output_bytes_are_bounded(self):
         self.assertLess(len(json.dumps(self.doc)), 4096)
 
