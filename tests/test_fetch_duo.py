@@ -152,6 +152,77 @@ class TestRefusals(FetchDuoTestBase):
             self.mod.fetch("emma_learn", deadline=time.monotonic() + 10)
         self.assertEqual(stat.S_IMODE(os.stat(self.cache_file).st_mode), 0o600)
 
+    def test_invalid_username_format_returns_error_code_1_no_cache_fallback(self):
+        os.makedirs(self.cache_dir, exist_ok=True)
+        with open(self.cache_file, "w") as fh:
+            fh.write(json.dumps({"valid": True, "username": "cached_user", "streak": 3}))
+        for bad_name in ["!", "x", "bad name", "a" * 26]:
+            out, code = self.mod.fetch(bad_name, deadline=time.monotonic() + 10)
+            self.assertEqual(code, 1)
+            data = json.loads(out)
+            self.assertFalse(data["valid"])
+            self.assertEqual(data["error"], "Invalid username format")
+
+    def test_empty_users_list_returns_user_not_found(self):
+        with mock.patch.object(self.mod.urllib.request, "urlopen",
+                               return_value=self.fake_response(self.body([]))):
+            out, code = self.mod.fetch("valid_user", deadline=time.monotonic() + 10)
+        self.assertEqual(code, 1)
+        data = json.loads(out)
+        self.assertFalse(data["valid"])
+        self.assertEqual(data["error"], "User not found on Duolingo")
+
+    def test_courses_truncated_to_max_courses(self):
+        users = [{
+            "username": "ok_user", "streak": 1, "totalXp": 1,
+            "courses": [{"title": "L%d" % i, "learningLanguage": "es",
+                         "xp": i, "crowns": 0} for i in range(60)],
+        }]
+        with mock.patch.object(self.mod.urllib.request, "urlopen",
+                               return_value=self.fake_response(self.body(users))):
+            out, code = self.mod.fetch("ok_user", deadline=time.monotonic() + 10)
+        self.assertEqual(code, 0)
+        data = json.loads(out)
+        self.assertTrue(data["valid"])
+        self.assertEqual(len(data["courses"]), self.mod.MAX_COURSES)
+
+    def test_regional_language_tags_and_flags(self):
+        users = [{
+            "username": "polyglot", "streak": 5, "totalXp": 1000,
+            "courses": [
+                {"title": "Dutch", "learningLanguage": "nl-NL", "xp": 500, "crowns": 10},
+                {"title": "Chinese", "learningLanguage": "zh-CN", "xp": 300, "crowns": 5},
+                {"title": "Spanish (LatAm)", "learningLanguage": "es-419", "xp": 200, "crowns": 2},
+                {"title": "Dutch (Alt)", "learningLanguage": "nl_NL", "xp": 150, "crowns": 1},
+                {"title": "Chinese (Alt)", "learningLanguage": "zh_CN", "xp": 100, "crowns": 1},
+            ],
+        }]
+        with mock.patch.object(self.mod.urllib.request, "urlopen",
+                               return_value=self.fake_response(self.body(users))):
+            out, code = self.mod.fetch("polyglot", deadline=time.monotonic() + 10)
+        self.assertEqual(code, 0)
+        data = json.loads(out)
+        self.assertTrue(data["valid"])
+        self.assertEqual(data["courses"][0]["flag"], "🇳🇱")
+        self.assertEqual(data["courses"][1]["flag"], "🇨🇳")
+        self.assertEqual(data["courses"][2]["flag"], "🇪🇸")
+        self.assertEqual(data["courses"][3]["flag"], "🇳🇱")
+        self.assertEqual(data["courses"][4]["flag"], "🇨🇳")
+
+    def test_long_avatar_url_preserved(self):
+        long_avatar = "https://d3gq3s1iyyx31w.cloudfront.net/static/render/bg/BackgroundColor-3/Body-5/ClothingColor-6/Expression-47/EyeColor-1/FacialHair-0/FacialHairColor-1/Glasses-0/GlassesColor-1/Headwear-10/HeadwearColor-6/MainHair-64/MainHairColor-5/Nose%20Piercing-0/Piercings-0/SkinTone-3/Wrinkles-0"
+        self.assertGreater(len(long_avatar), 200)
+        users = [{
+            "username": "avatar_user", "streak": 2, "totalXp": 50,
+            "picture": long_avatar, "courses": [],
+        }]
+        with mock.patch.object(self.mod.urllib.request, "urlopen",
+                               return_value=self.fake_response(self.body(users))):
+            out, code = self.mod.fetch("avatar_user", deadline=time.monotonic() + 10)
+        self.assertEqual(code, 0)
+        data = json.loads(out)
+        self.assertEqual(data["avatar"], long_avatar)
+
 
 if __name__ == "__main__":
     unittest.main()

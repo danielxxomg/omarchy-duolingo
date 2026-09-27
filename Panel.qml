@@ -119,6 +119,7 @@ Panel {
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
+      blocked: usernameInput.activeFocus
       onCloseRequested: root.close()
       onReturnRequested: root.launchDuolingo()
       onMoveRequested: function(dx, dy) {
@@ -189,7 +190,7 @@ Panel {
         // 2. Status Banner
         Rectangle {
           width: parent.width
-          implicitHeight: statusText.implicitHeight + Style.space(12)
+          implicitHeight: statusCol.implicitHeight + Style.space(16)
           radius: Math.min(Style.cornerRadius, 6)
           color: {
             if (!root.effectiveData || !root.effectiveData.valid) return Qt.rgba(0.5, 0.5, 0.5, 0.12)
@@ -198,84 +199,97 @@ Panel {
             return Qt.rgba(1.0, 0.2, 0.2, 0.14)
           }
 
-          Text {
-            id: statusText
+          Column {
+            id: statusCol
             anchors.centerIn: parent
             width: parent.width - Style.space(16)
-            text: {
-              var data = root.effectiveData
-              var err = root.effectiveError
-              var stale = root.effectiveStale
-              if (!data || !data.valid) {
-                if (err) return err
-                return "Connecting to Duolingo account..."
-              }
-              if (stale) return "Offline — showing last saved data."
-              if (data.streakExtendedToday) return "Streak completed for today."
-              return "Daily lesson pending. Practice today to keep your streak."
-            }
-            color: {
-              if (!root.effectiveData || !root.effectiveData.valid) return root.dim
-              if (root.effectiveStale) return root.dim
-              if (root.effectiveData.streakExtendedToday) return root.accentColor
-              return root.urgent
-            }
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            font.bold: true
-            wrapMode: Text.WordWrap
-            horizontalAlignment: Text.AlignHCenter
-          }
-
-          // Actionable errors: give the failure a one-click next step.
-          Row {
-            anchors.horizontalCenter: parent.horizontalCenter
             spacing: Style.space(8)
-            visible: {
-              var data = root.effectiveData
-              if (!data || !data.valid) return true
-              return root.effectiveStale
+
+            Text {
+              id: statusText
+              width: parent.width
+              text: {
+                var data = root.effectiveData
+                var err = root.effectiveError
+                var stale = root.effectiveStale
+                if (!data || !data.valid) {
+                  if (err) return err
+                  return "Connecting to Duolingo account..."
+                }
+                if (stale) return "Offline — showing last saved data."
+                if (data.streakExtendedToday) return "Streak completed for today."
+                return "Daily lesson pending. Practice today to keep your streak."
+              }
+              color: {
+                if (!root.effectiveData || !root.effectiveData.valid) return root.dim
+                if (root.effectiveStale) return root.dim
+                if (root.effectiveData.streakExtendedToday) return root.accentColor
+                return root.urgent
+              }
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              font.bold: true
+              wrapMode: Text.WordWrap
+              horizontalAlignment: Text.AlignHCenter
             }
 
-            component ActionChip : Rectangle {
-              id: chip
-              property string label: ""
-              signal activated()
-              implicitWidth: chipLabel.implicitWidth + Style.space(14)
-              implicitHeight: Style.space(24)
-              radius: Math.min(Style.cornerRadius, 12)
-              color: chipMouse.containsMouse ? Qt.darker(root.accentColor, 1.1) : Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.16)
-              Text {
-                id: chipLabel
-                anchors.centerIn: parent
-                text: chip.label
-                color: root.accentColor
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
-                font.bold: true
+            // Actionable errors: give the failure a one-click next step.
+            Row {
+              anchors.horizontalCenter: parent.horizontalCenter
+              spacing: Style.space(8)
+              visible: {
+                var data = root.effectiveData
+                if (!data || !data.valid) return true
+                return root.effectiveStale
               }
-              MouseArea {
-                id: chipMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: chip.activated()
-              }
-            }
 
-            ActionChip {
-              label: root.effectiveError.indexOf("not found") >= 0 ? "Change Username" : "Retry"
-              onActivated: {
-                if (root.effectiveError.indexOf("not found") >= 0) root.settingsOpen = true
-                else if (root.service && typeof root.service.refresh === "function") root.service.refresh()
+              component ActionChip : Rectangle {
+                id: chip
+                property string label: ""
+                signal activated()
+                implicitWidth: chipLabel.implicitWidth + Style.space(14)
+                implicitHeight: Style.space(24)
+                radius: Math.min(Style.cornerRadius, 12)
+                color: chipMouse.containsMouse ? Qt.darker(root.accentColor, 1.1) : Qt.rgba(root.accentColor.r, root.accentColor.g, root.accentColor.b, 0.16)
+                Text {
+                  id: chipLabel
+                  anchors.centerIn: parent
+                  text: chip.label
+                  color: root.accentColor
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  font.bold: true
+                }
+                MouseArea {
+                  id: chipMouse
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: chip.activated()
+                }
               }
-            }
 
-            ActionChip {
-              visible: root.effectiveError.indexOf("not found") < 0
-              label: "Launch Duolingo"
-              onActivated: {
-                if (root.service && typeof root.service.launchDuolingo === "function") root.service.launchDuolingo()
+              ActionChip {
+                visible: !root.hasConfiguredUsername && (!root.effectiveData || !root.effectiveData.valid)
+                label: "Open Settings"
+                onActivated: root.settingsOpen = true
+              }
+
+              ActionChip {
+                visible: root.hasConfiguredUsername || (root.effectiveData && root.effectiveData.valid)
+                label: root.effectiveError.indexOf("not found") >= 0 ? "Change Username" : "Retry"
+                onActivated: {
+                  if (root.effectiveError.indexOf("not found") >= 0) root.settingsOpen = true
+                  else if (root.service && typeof root.service.refresh === "function") root.service.refresh()
+                }
+              }
+
+              ActionChip {
+                visible: (root.hasConfiguredUsername || (root.effectiveData && root.effectiveData.valid)) && root.effectiveError.indexOf("not found") < 0
+                label: "Launch Duolingo"
+                onActivated: {
+                  if (root.service && typeof root.service.launchDuolingo === "function") root.service.launchDuolingo()
+                }
               }
             }
           }
@@ -332,7 +346,7 @@ Panel {
         Column {
           width: parent.width
           spacing: Style.space(6)
-          visible: root.hasConfiguredUsername && root.effectiveData && root.effectiveData.valid
+          visible: root.effectiveData && root.effectiveData.valid
 
           Item {
             width: parent.width

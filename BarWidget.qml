@@ -22,6 +22,19 @@ BarWidget {
   readonly property int xpToday: service ? service.xpToday : 0
   readonly property int goalXp: service ? service.goalXp : 50
 
+  property int currentHour: new Date().getHours()
+
+  Timer {
+    id: hourTick
+    interval: 60 * 1000
+    running: true
+    repeat: true
+    onTriggered: {
+      var h = new Date().getHours()
+      if (root.currentHour !== h) root.currentHour = h
+    }
+  }
+
   Connections {
     target: root.service
     function onRequestPanelToggle() { root.togglePanel() }
@@ -145,13 +158,13 @@ BarWidget {
       //   inProgress  green tinted by progress fraction (0.14..0.55)
       readonly property bool hasData: root.userData && root.userData.valid
       readonly property bool streakDone: hasData && root.userData.streakExtendedToday === true
-      readonly property int hoursToMidnight: (24 - new Date().getHours()) % 24
-      readonly property bool atRisk: hasData && !streakDone && root.hoursToMidnight < 3
+      readonly property int hoursToMidnight: 24 - root.currentHour
+      readonly property bool atRisk: hasData && !streakDone && barRow.hoursToMidnight < 3
       readonly property real goalFrac: hasData && root.goalXp > 0
                                        ? Math.max(0, Math.min(1, root.xpToday / root.goalXp)) : 0
       // Urgency ramps up as midnight approaches during the final 6 hours.
       readonly property real urgency: hasData && !streakDone
-                                      ? Math.max(0, Math.min(1, (6 - root.hoursToMidnight) / 6)) : 0
+                                      ? Math.max(0, Math.min(1, (6 - barRow.hoursToMidnight) / 6)) : 0
 
       Rectangle {
         id: pill

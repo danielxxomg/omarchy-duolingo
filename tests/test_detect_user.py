@@ -75,6 +75,60 @@ class TestExtraction(DetectUserTestBase):
         path = self.write("store", b'"H4sIAAAAA!!!not-base64!!!"')
         self.assertEqual(self.mod.find_username([path]), "")
 
+    def test_wal_binary_non_ascii_chunking_safely_ignored(self):
+        # Corrupted/chunked WAL match containing binary non-ASCII bytes followed by a valid record
+        corrupt = b'"H4sIAAAAA\x80\xff\x00some_binary_garbage"'
+        valid = make_record(VALID_USER)
+        path = self.write("store_wal", corrupt + b"\n" + valid)
+        self.assertEqual(self.mod.find_username([path]), "emma_learn")
+
+    def test_sqlite_extraction_success(self):
+        import sqlite3
+        path = os.path.join(self.dir, "test_data.sqlite")
+        conn = sqlite3.connect(path)
+        cur = conn.cursor()
+        cur.execute("CREATE TABLE data (key TEXT, value BLOB)")
+        cur.execute("INSERT INTO data VALUES (?, ?)", ("duo.state", make_record(VALID_USER)))
+        conn.commit()
+        conn.close()
+        self.assertEqual(self.mod.find_username([path]), "emma_learn")
+
+    def test_candidate_paths_include_edge_and_ice(self):
+        joined = " ".join(self.mod.CANDIDATE_PATHS)
+        self.assertIn("microsoft-edge", joined)
+        self.assertIn("ice/firefox", joined)
+
+    def test_leveldb_wal_chunked_blocks_reconstructed(self):
+        import hashlib, struct
+        incompressible = b"".join([hashlib.sha256(str(i).encode()).digest() for i in range(2500)]).hex()
+        user_dict = {
+            "state": {
+                "redux": {
+                    "user": {"username": "emma_learn"},
+                    "pad": incompressible
+                }
+            }
+        }
+        raw = json.dumps(user_dict).encode("utf-8")
+        compressed = gzip.compress(raw)
+        b64 = base64.b64encode(compressed).decode("ascii")
+        rec = ('"' + b64 + '"').encode("latin-1")
+        self.assertGreater(len(rec), 70000)
+
+        block_size = 32768
+        header_size = 7
+        payload_per_block = block_size - header_size
+        chunks = [rec[i:i + payload_per_block] for i in range(0, len(rec), payload_per_block)]
+        blocks = []
+        for idx, c in enumerate(chunks):
+            rec_type = 2 if idx == 0 else (4 if idx == len(chunks) - 1 else 3)
+            hdr = struct.pack("<IHb", 0, len(c), rec_type)
+            blk = hdr + c
+            blk += b"\x00" * (block_size - len(blk))
+            blocks.append(blk)
+        path = self.write("test_chunked.log", b"".join(blocks))
+        self.assertEqual(self.mod.find_username([path]), "emma_learn")
+
 
 class TestRefusals(DetectUserTestBase):
     def test_symlink_skipped(self):

@@ -72,6 +72,13 @@ class StateIoTest(unittest.TestCase):
             self.assertEqual(fh.read(), "do not touch")
         shutil.rmtree(outside, ignore_errors=True)
 
+    def test_direct_executable_execution(self):
+        # Verify state-io.py is executable directly without python3 prefix
+        result = subprocess.run(
+            [BIN, "read"],
+            capture_output=True, env=self.env, timeout=15)
+        self.assertEqual(result.returncode, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

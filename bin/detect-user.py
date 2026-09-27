@@ -19,11 +19,12 @@ import re
 import sys
 import time
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from duoio import DuoIOError, open_regular_nofollow
 
 MAX_FILE_SIZE = 16 * 1024 * 1024
 MAX_TOTAL_BYTES = 64 * 1024 * 1024
-MAX_DECOMPRESSED_BYTES = 4 * 1024 * 1024
+MAX_DECOMPRESSED_BYTES = 32 * 1024 * 1024
 MAX_MATCHES_PER_FILE = 64
 DEADLINE_SECONDS = 20.0
 
@@ -32,9 +33,13 @@ CANDIDATE_PATHS = [
     "~/.config/BraveSoftware/Brave-Browser/Default/Local Storage/leveldb/*",
     "~/.config/google-chrome/Default/Local Storage/leveldb/*",
     "~/.config/chromium/Default/Local Storage/leveldb/*",
+    "~/.config/microsoft-edge/Default/Local Storage/leveldb/*",
+    "~/.config/microsoft-edge-dev/Default/Local Storage/leveldb/*",
+    "~/.config/microsoft-edge-beta/Default/Local Storage/leveldb/*",
+    "~/.local/share/ice/firefox/*/storage/default/https+++www.duolingo.com/ls/data.sqlite",
 ]
 
-RECORD_RE = re.compile(r'"(H4sIAAAAA[^"]+)"')
+RECORD_RE = re.compile(r'"(H4sIAAAAA[A-Za-z0-9+/=]+)"')
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{2,25}$")
 
 
@@ -85,7 +90,81 @@ def _extract_from_file(path, deadline):
         os.close(fd)
     if len(content) > MAX_FILE_SIZE:
         return ""  # grew past cap between stat and read: refuse
-    return _extract_from_content(content, deadline)
+    if content.startswith(b"SQLite format 3\x00"):
+        user = _extract_from_sqlite(path, deadline)
+        if user:
+            return user
+    user = _extract_from_content(content, deadline)
+    if not user and (path.endswith(".log") or b"H4sIAAAAA" in content):
+        user = _extract_from_leveldb_log(content, deadline)
+    return user
+
+
+def _extract_from_leveldb_log(content, deadline):
+    """Reconstruct chunked records from a LevelDB WAL (.log) file."""
+    BLOCK_SIZE = 32768
+    HEADER_SIZE = 7
+    offset = 0
+    current_record = bytearray()
+    while offset < len(content):
+        if time.monotonic() > deadline:
+            return ""
+        block = content[offset:offset + BLOCK_SIZE]
+        offset += BLOCK_SIZE
+        boff = 0
+        while boff + HEADER_SIZE <= len(block):
+            length = block[boff + 4] | (block[boff + 5] << 8)
+            rec_type = block[boff + 6]
+            boff += HEADER_SIZE
+            if length == 0 and rec_type == 0:
+                break
+            if boff + length > len(block):
+                break
+            payload = block[boff:boff + length]
+            boff += length
+            if rec_type == 1:  # FULL
+                u = _extract_from_content(payload, deadline)
+                if u:
+                    return u
+            elif rec_type == 2:  # FIRST
+                current_record = bytearray(payload)
+            elif rec_type == 3:  # MIDDLE
+                if len(current_record) + len(payload) <= MAX_FILE_SIZE:
+                    current_record.extend(payload)
+                else:
+                    current_record = bytearray()
+            elif rec_type == 4:  # LAST
+                if len(current_record) + len(payload) <= MAX_FILE_SIZE:
+                    current_record.extend(payload)
+                    u = _extract_from_content(bytes(current_record), deadline)
+                    if u:
+                        return u
+                current_record = bytearray()
+    return ""
+
+
+def _extract_from_sqlite(path, deadline):
+    import sqlite3
+    try:
+        conn = sqlite3.connect(f"file:{path}?immutable=1", uri=True)
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT value FROM data WHERE key = 'duo.state' LIMIT 1")
+            row = cur.fetchone()
+            if not row or not row[0]:
+                return ""
+            val = row[0]
+            if isinstance(val, (bytes, bytearray)):
+                content = bytes(val)
+            elif isinstance(val, str):
+                content = val.encode("latin-1", errors="ignore")
+            else:
+                return ""
+            return _extract_from_content(content, deadline)
+        finally:
+            conn.close()
+    except Exception:
+        return ""
 
 
 def _extract_from_content(content, deadline):

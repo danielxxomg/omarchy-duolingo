@@ -44,7 +44,7 @@ var FLAG_MAP = {
 function getLanguageFlag(code) {
   if (!code) return "🌐"
   var clean = code.toLowerCase().trim()
-  return FLAG_MAP[clean] || "🌐"
+  return FLAG_MAP[clean] || FLAG_MAP[clean.replace(/_/g, "-").split("-")[0]] || "🌐"
 }
 
 function parseUserData(rawText) {

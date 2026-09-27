@@ -206,7 +206,43 @@ Item {
     saveHistory()
   }
 
+  function loadInitialBarConfig() {
+    if (!root.shell || !root.shell.barConfig) return
+    var cfg = root.shell.barConfig
+    var found = null
+    if (cfg.layout) {
+      var sections = ["left", "center", "right"]
+      for (var s = 0; s < sections.length; s++) {
+        var arr = cfg.layout[sections[s]]
+        if (Array.isArray(arr)) {
+          for (var i = 0; i < arr.length; i++) {
+            if (arr[i] && (arr[i].id === "user.duolingo" || arr[i].id === "duolingo")) {
+              found = arr[i]
+              break
+            }
+          }
+        }
+        if (found) break
+      }
+    }
+    if (!found && cfg.entries && (cfg.entries["user.duolingo"] || cfg.entries["duolingo"])) {
+      found = cfg.entries["user.duolingo"] || cfg.entries["duolingo"]
+    }
+    if (!found && Array.isArray(cfg.plugins)) {
+      for (var p = 0; p < cfg.plugins.length; p++) {
+        if (cfg.plugins[p] && (cfg.plugins[p].id === "user.duolingo" || cfg.plugins[p].id === "duolingo")) {
+          found = cfg.plugins[p]
+          break
+        }
+      }
+    }
+    if (found) {
+      root.widgetSettings = found
+    }
+  }
+
   Component.onCompleted: {
+    loadInitialBarConfig()
     loadHistory()
     refresh()
   }
@@ -331,9 +367,13 @@ Item {
     if (!root.historyLoaded || root.dead) return
     if (historyWriter.running || historyReader.running) { root.saveQueued = true; return }
     root.writingRev = root.diskRev + 1
-    var body = JSON.stringify(root.history)
-    // Ensure rev is the first key for bounded on-disk revalidation.
-    root.pendingWritePayload = '{"rev":' + root.writingRev + ',' + body.slice(1)
+    // Construct clean payload object with rev as first key, eliminating duplicate "rev" keys.
+    var payload = {
+      rev: root.writingRev,
+      days: (root.history && root.history.days) ? root.history.days : {},
+      updatedAt: (root.history && root.history.updatedAt) ? root.history.updatedAt : new Date().toISOString()
+    }
+    root.pendingWritePayload = JSON.stringify(payload)
     if (root.pendingWritePayload.length > root.maxStateBytes) return
     historyWriter.command = [root.pluginDir + "/bin/state-io.py", "write", String(root.writingRev)]
     historyWriter.running = true

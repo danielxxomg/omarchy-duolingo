@@ -104,6 +104,37 @@ test("parseUserData rejects empty input", () => {
   assert.equal(model.parseUserData("not json").valid, false);
 });
 
+test("getLanguageFlag supports base codes and regional tags", () => {
+  assert.equal(model.getLanguageFlag("es"), "🇪🇸");
+  assert.equal(model.getLanguageFlag("nl-NL"), "🇳🇱");
+  assert.equal(model.getLanguageFlag("zh-CN"), "🇨🇳");
+  assert.equal(model.getLanguageFlag("es-419"), "🇪🇸");
+  assert.equal(model.getLanguageFlag("nl_NL"), "🇳🇱");
+  assert.equal(model.getLanguageFlag("zh_CN"), "🇨🇳");
+  assert.equal(model.getLanguageFlag("es_419"), "🇪🇸");
+  assert.equal(model.getLanguageFlag("unknown-XX"), "🌐");
+  assert.equal(model.getLanguageFlag(""), "🌐");
+});
+
+test("parseUserData maps regional course language tags", () => {
+  const payload = {
+    valid: true,
+    username: "polyglot",
+    courses: [
+      { title: "Dutch", learningLanguage: "nl-NL", xp: 100, crowns: 1 },
+      { title: "Chinese", learningLanguage: "zh-CN", xp: 50, crowns: 1 },
+      { title: "Dutch (Alt)", learningLanguage: "nl_NL", xp: 30, crowns: 1 },
+      { title: "Chinese (Alt)", learningLanguage: "zh_CN", xp: 20, crowns: 1 },
+    ],
+  };
+  const r = model.parseUserData(JSON.stringify(payload));
+  assert.equal(r.valid, true);
+  assert.equal(r.courses[0].flag, "🇳🇱");
+  assert.equal(r.courses[1].flag, "🇨🇳");
+  assert.equal(r.courses[2].flag, "🇳🇱");
+  assert.equal(r.courses[3].flag, "🇨🇳");
+});
+
 // --- Model history math ------------------------------------------------------
 
 test("xpToday uses latest prior day baseline", () => {

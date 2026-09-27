@@ -40,6 +40,7 @@ MAX_MATCHES = 1
 MAX_COURSES = 50
 MAX_STR = 120
 MAX_STR_LONG = 80
+MAX_AVATAR_STR = 1024
 
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{2,25}$")
 
@@ -60,12 +61,18 @@ def fetch(username, deadline=None):
     if deadline is None:
         deadline = time.monotonic() + HTTP_TIMEOUT + 1.0
     if username:
+        if not USERNAME_RE.match(username):
+            return json.dumps({"valid": False,
+                               "error": "Invalid username format"}), 1
         try:
             body = _http_fetch(username, deadline)
         except UpstreamError as exc:
             return json.dumps({"valid": False, "error": str(exc)}), 1
         if body is not None:
-            data = normalize(body)
+            try:
+                data = normalize(body)
+            except UserNotFoundError as exc:
+                return json.dumps({"valid": False, "error": str(exc)}), 1
             if data is not None:
                 _cache_write(json.dumps(data))
                 return json.dumps(data), 0
@@ -120,6 +127,10 @@ class UpstreamError(Exception):
     """Upstream refused the request (definitive HTTP error, no cache fallback)."""
 
 
+class UserNotFoundError(Exception):
+    """User not found in Duolingo directory."""
+
+
 def _clean_str(value, limit):
     if not isinstance(value, str):
         return ""
@@ -146,7 +157,11 @@ def normalize(body):
     if not isinstance(parsed, dict):
         return None
     users = parsed.get("users")
-    if not isinstance(users, list) or len(users) != MAX_MATCHES:
+    if not isinstance(users, list):
+        return None
+    if len(users) == 0:
+        raise UserNotFoundError("User not found on Duolingo")
+    if len(users) != MAX_MATCHES:
         return None
     user = users[0]
     if not isinstance(user, dict):
@@ -158,7 +173,7 @@ def normalize(body):
     # Privacy: the upstream display name (often the legal name) is never
     # projected or persisted; the public username doubles as the title.
     fullname = username
-    avatar = _clean_str(user.get("picture"), MAX_STR)
+    avatar = _clean_str(user.get("picture"), MAX_AVATAR_STR)
     if avatar.startswith("//"):
         avatar = "https:" + avatar
     if avatar and not avatar.startswith("https://"):
@@ -180,15 +195,16 @@ def normalize(body):
             if isinstance(raw_start, str) and re.match(r"^\d{4}-\d{2}-\d{2}$", raw_start):
                 streak_start = raw_start
     raw_courses = user.get("courses", [])
-    if not isinstance(raw_courses, list) or len(raw_courses) > MAX_COURSES:
+    if not isinstance(raw_courses, list):
         return None
+    raw_courses = raw_courses[:MAX_COURSES]
     courses = []
     for course in raw_courses:
         if not isinstance(course, dict):
             return None
         title = _clean_str(course.get("title"), MAX_STR_LONG)
         lang = _clean_str(course.get("learningLanguage"), 16)
-        if not lang or not re.match(r"^[a-z]{2,8}$", lang):
+        if not lang or not re.match(r"^[a-zA-Z0-9_-]{2,16}$", lang):
             return None
         xp = course.get("xp", 0)
         crowns = course.get("crowns", 0)
@@ -201,7 +217,8 @@ def normalize(body):
     courses.sort(key=lambda c: c["xp"], reverse=True)
     max_course_xp = max((c["xp"] for c in courses), default=1) or 1
     for c in courses:
-        c["flag"] = FLAG_MAP.get(c["learningLanguage"], "🌐")
+        base_lang = re.split(r"[-_]", c["learningLanguage"].lower())[0]
+        c["flag"] = FLAG_MAP.get(base_lang, "🌐")
         c["fraction"] = c["xp"] / max_course_xp
     return {
         "valid": True,
@@ -286,8 +303,6 @@ def main():
                 username = res.stdout.strip()
         except Exception:
             username = ""
-    if username and not USERNAME_RE.match(username):
-        username = ""
     out, code = fetch(username)
     sys.stdout.write(out + "\n")
     sys.exit(code)
